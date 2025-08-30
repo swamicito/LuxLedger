@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LuxLedger Design System - Premium luxury marketplace aesthetics */
+
+@layer base {
+  :root {
+    /* Core luxury color palette */
+    --background: 220 27% 4%;
+    --foreground: 46 100% 94%;
+
+    --card: 220 27% 6%;
+    --card-foreground: 46 100% 94%;
+
+    --popover: 220 27% 6%;
+    --popover-foreground: 46 100% 94%;
+
+    --primary: 46 100% 77%;
+    --primary-foreground: 220 27% 4%;
+
+    --secondary: 220 27% 12%;
+    --secondary-foreground: 46 100% 94%;
+
+    --muted: 220 27% 8%;
+    --muted-foreground: 46 30% 70%;
+
+    --accent: 46 100% 77%;
+    --accent-foreground: 220 27% 4%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 46 100% 94%;
+
+    --border: 220 27% 12%;
+    --input: 220 27% 12%;
+    --ring: 46 100% 77%;
+
+    /* Luxury gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(46 100% 77%), hsl(46 100% 85%));
+    --gradient-dark: linear-gradient(135deg, hsl(220 27% 4%), hsl(220 27% 8%));
+    --gradient-card: linear-gradient(135deg, hsl(220 27% 6%), hsl(220 27% 10%));
+    --gradient-luxury: linear-gradient(135deg, hsl(46 100% 77%), hsl(42 100% 70%), hsl(38 100% 65%));
+
+    /* Premium shadows */
+    --shadow-luxury: 0 25px 50px -12px hsl(46 100% 77% / 0.25);
+    --shadow-card: 0 10px 25px -3px hsl(220 27% 4% / 0.1), 0 4px 6px -2px hsl(220 27% 4% / 0.05);
+    --shadow-glow: 0 0 40px hsl(46 100% 77% / 0.3);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+}
+
+@layer components {
+  /* Luxury button variants */
+  .btn-luxury {
+    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground 
+           hover:shadow-lg hover:scale-105 transition-all duration-300 
+           font-medium px-8 py-4 rounded-lg;
+  }
+
+  .btn-luxury-outline {
+    @apply border-2 border-primary bg-transparent text-primary 
+           hover:bg-primary hover:text-primary-foreground 
+           transition-all duration-300 font-medium px-8 py-4 rounded-lg;
+  }
+
+  /* Premium card styles */
+  .luxury-card {
+    @apply bg-gradient-to-br from-card to-muted border border-border 
+           shadow-2xl backdrop-blur-sm rounded-xl hover:shadow-luxury 
+           transition-all duration-500 hover:scale-[1.02];
+  }
+
+  /* Gradient backgrounds */
+  .bg-luxury-gradient {
+    background: var(--gradient-luxury);
+  }
+
+  .bg-dark-gradient {
+    background: var(--gradient-dark);
+  }
+
+  .bg-card-gradient {
+    background: var(--gradient-card);
+  }
+
+  /* Premium typography */
+  .text-luxury-gradient {
+    @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Premium animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.8s ease-out forwards;
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
