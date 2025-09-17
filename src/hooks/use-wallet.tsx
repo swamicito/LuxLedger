@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useToast } from '@/hooks/use-toast';
 import { XummSdk } from 'xumm-sdk';
 import { xrplClient } from '@/lib/xrpl-client';
+import { autoRegister } from '@/lib/luxbroker/auto-register';
 console.log("✅ ENV KEY:", import.meta.env.VITE_XUMM_API_KEY);
 console.log("✅ ENV SECRET:", import.meta.env.VITE_XUMM_API_SECRET);
 
@@ -78,6 +79,13 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setAccount(demoAccount);
         localStorage.setItem('luxledger_wallet', JSON.stringify(demoAccount));
 
+        // Auto-register seller with LuxBroker system (demo mode)
+        try {
+          await autoRegister.registerSeller(demoAccount.address);
+        } catch (error) {
+          console.log('Auto-register failed (non-critical):', error);
+        }
+
         toast({
           title: "Demo Wallet Connected",
           description: `Connected to ${demoAccount.address.slice(0, 8)}...`,
@@ -115,13 +123,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
               address: walletAddress,
               balance: `${balance} XRP`,
               network: import.meta.env.VITE_XRPL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet',
-              publicKey: signInResult.response.publickey,
+              publicKey: signInResult.response.signer_pubkey,
               trustlines,
               nfts
             };
 
             setAccount(connectedAccount);
             localStorage.setItem('luxledger_wallet', JSON.stringify(connectedAccount));
+
+            // Auto-register seller with LuxBroker system
+            try {
+              await autoRegister.registerSeller(walletAddress);
+            } catch (error) {
+              console.log('Auto-register failed (non-critical):', error);
+            }
 
             toast({
               title: "Wallet Connected",

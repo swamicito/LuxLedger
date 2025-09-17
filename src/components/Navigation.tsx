@@ -21,6 +21,10 @@ const Navigation = () => {
     { href: '/dashboard', label: t('nav.dashboard') },
     { href: '/portfolio', label: t('nav.portfolio') },
     { href: '/trading', label: t('nav.trading') },
+    { href: '/escrow/dashboard', label: 'Escrow' },
+    { href: '/broker', label: 'LuxBroker' },
+    { href: '/broker/leaderboard', label: 'Leaderboard' },
+    { href: '/broker/debugger', label: 'Debug' },
   ];
 
   const isActive = (href: string) => location.pathname === href;
