@@ -1,34 +1,58 @@
 /**
  * LuxBroker Commission Payout API
  * Handles automatic commission payments via XRPL
+ * 
+ * SECURITY: Requires admin role - payouts are sensitive operations
  */
 
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { createClient } from '@supabase/supabase-js';
 import { XRPLCommissionManager } from '../../src/lib/luxbroker/xrpl-commission';
-import { commissionService, brokerService, sellerService } from '../../src/lib/supabase-client';
+import {
+  verifyWalletAuth,
+  requireAdmin,
+  checkRateLimit,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, x-wallet, x-auth-token',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit: 5 sensitive ops per minute
+  const clientIP = event.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
+  const rateCheck = checkRateLimit(clientIP, 'sensitive');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many requests', rateCheck.retryAfter);
+  }
+
+  // Authenticate - commission payouts require admin privileges
+  const walletAddress = event.headers['x-wallet-address'];
+  const authResult = await verifyWalletAuth(walletAddress, undefined, undefined, supabase);
+  
+  if (!authResult.success) {
+    return errorResponse(authResult.statusCode, authResult.error || 'Authentication failed');
+  }
+
+  // CRITICAL: Only admins can trigger payouts
+  const roleCheck = requireAdmin(authResult.context);
+  if (!roleCheck.success) {
+    safeLog('warn', 'Unauthorized payout attempt', { wallet: walletAddress?.slice(0, 10) });
+    return errorResponse(roleCheck.statusCode, roleCheck.error || 'Admin access required');
   }
 
   try {
@@ -146,17 +170,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     };
 
   } catch (error) {
-    console.error('Commission payout error:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: (error as Error).message
-      })
-    };
+    safeLog('error', 'Commission payout error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

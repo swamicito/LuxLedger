@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useWallet } from '@/hooks/use-wallet';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-client';
 import { 
   ArrowLeft,
   Share2,
@@ -24,6 +24,12 @@ import {
   BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { TrustStrip } from '@/components/ui/trust-strip';
+import { DualPrice, FeeBreakdown } from '@/components/ui/fee-breakdown';
+import { TrustBadge } from '@/components/ui/trust-signals';
+import { EscapeHatches } from '@/components/ui/escape-hatches';
+import { VideoProofDisplay } from '@/components/listing';
+import { isVideoRequired } from '@/lib/video-verification';
 
 export default function AssetDetail() {
   const { id } = useParams();
@@ -237,10 +243,24 @@ export default function AssetDetail() {
           </div>
         </div>
 
+        {/* Trust Strip */}
+        <div className="mb-6">
+          <TrustStrip />
+        </div>
+
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Asset Image */}
+          {/* Asset Media - Video First, Then Images */}
           <div className="space-y-4">
+            {/* Video Proof Display (shown prominently before images) */}
+            {asset.video_url && (
+              <VideoProofDisplay 
+                videoUrl={asset.video_url}
+                posterUrl={asset.images?.[0]}
+              />
+            )}
+
+            {/* Primary Image */}
             <div className="aspect-square bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg overflow-hidden">
               {asset.images && asset.images.length > 0 ? (
                 <img 
@@ -291,7 +311,7 @@ export default function AssetDetail() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Current Value</p>
-                <p className="text-2xl font-bold">{formatCurrency(asset.estimated_value)}</p>
+                <DualPrice amountUSD={asset.estimated_value} size="md" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Owner</p>
@@ -319,13 +339,33 @@ export default function AssetDetail() {
                       placeholder="Enter your bid..."
                     />
                   </div>
-                  <Button 
-                    onClick={handleTrade}
-                    className="w-full"
-                    disabled={!bidAmount}
-                  >
-                    {!account ? 'Connect Wallet to Trade' : 'Place Bid'}
-                  </Button>
+                  {!account ? (
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                        <p className="text-sm font-medium text-amber-300">Why connect a wallet?</p>
+                        <p className="text-xs text-amber-300/70 mt-1">
+                          Your wallet securely signs the transaction. Funds go into blockchain escrow—not to us—until you confirm delivery.
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={connectWallet}
+                        className="w-full"
+                      >
+                        Connect Wallet to Continue
+                      </Button>
+                      <a href="/help#wallets" className="block text-center text-xs text-amber-400 hover:underline">
+                        Learn more about wallets →
+                      </a>
+                    </div>
+                  ) : (
+                    <Button 
+                      onClick={handleTrade}
+                      className="w-full"
+                      disabled={!bidAmount}
+                    >
+                      Place Bid
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}

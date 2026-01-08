@@ -146,3 +146,122 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVIGATION & HEADER - World-class premium styling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Logo - Fixed sizing to prevent layout shift */
+  .nav-logo {
+    height: 28px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 640px) {
+    .nav-logo {
+      height: 32px;
+    }
+  }
+
+  /* Nav link base styles with micro-interactions */
+  .nav-link {
+    @apply relative px-3 py-2 text-sm font-medium rounded-md;
+    @apply text-muted-foreground;
+    @apply transition-all duration-200 ease-out;
+    @apply hover:text-white hover:bg-white/[0.06];
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    transform: translateY(0);
+  }
+
+  .nav-link:hover {
+    transform: translateY(-1px);
+  }
+
+  .nav-link:active {
+    transform: translateY(0);
+    @apply bg-white/[0.08];
+  }
+
+  /* Active nav link state */
+  .nav-link-active {
+    @apply text-amber-300;
+  }
+
+  .nav-link-active::after {
+    content: '';
+    @apply absolute bottom-0 left-1/2 -translate-x-1/2;
+    @apply h-0.5 w-5 rounded-full bg-amber-400;
+    @apply transition-all duration-300;
+  }
+
+  .nav-link-active:hover::after {
+    @apply w-6;
+  }
+
+  /* Nav button with premium micro-interactions */
+  .nav-button {
+    @apply transition-all duration-200 ease-out;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    transform: translateY(0);
+  }
+
+  .nav-button:hover {
+    transform: translateY(-1px);
+  }
+
+  .nav-button:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* Mobile menu items - larger tap targets */
+  .mobile-menu-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg;
+    @apply text-base font-medium;
+    @apply transition-all duration-200 ease-out;
+    min-height: 48px; /* WCAG touch target */
+  }
+
+  .mobile-menu-item:hover {
+    @apply bg-white/[0.06];
+  }
+
+  .mobile-menu-item:active {
+    @apply bg-white/[0.08];
+  }
+
+  .mobile-menu-item-active {
+    @apply text-amber-400 bg-amber-500/10;
+  }
+
+  /* Mobile menu section divider */
+  .mobile-menu-section {
+    @apply pt-4 mt-4 border-t border-white/10;
+  }
+
+  /* Tap target helper - ensures 44x44 minimum */
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+    @apply flex items-center justify-center;
+  }
+
+  /* Logo container - prevents layout shift */
+  .logo-container {
+    @apply flex items-center gap-2.5;
+    min-height: 32px; /* Reserve space */
+  }
+
+  /* Logo text styling */
+  .logo-text {
+    @apply text-lg font-semibold tracking-tight leading-none;
+  }
+
+  @media (min-width: 640px) {
+    .logo-text {
+      @apply text-xl;
+    }
+  }
+}

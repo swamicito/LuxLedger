@@ -1,15 +1,16 @@
-import { Button } from "@/components/ui/button";
-import { Mail, Twitter, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Mail, Twitter, Shield, ExternalLink } from "lucide-react";
 
 export function Footer() {
-  const web3Alias = process.env.NEXT_PUBLIC_WEB3_ALIAS || 'luxledger.crypto';
-  const twitterHandle = process.env.NEXT_PUBLIC_TW_HANDLE || '@LuxLedgerHQ';
+  const web3Alias = import.meta.env.VITE_WEB3_ALIAS || 'luxledger.crypto';
+  const twitterHandle = import.meta.env.VITE_TW_HANDLE || '@LuxLedgerHQ';
 
   const footerLinks = {
     platform: [
       { name: "Terms", href: "/terms" },
       { name: "Privacy", href: "/privacy" },
       { name: "Fees & Pricing", href: "/pay" },
+      { name: "Trust & Security", href: "/trust" },
       { name: "Contact", href: "/contact" }
     ]
   };
@@ -23,10 +24,24 @@ export function Footer() {
     <footer style={{ backgroundColor: 'var(--charcoal)', borderTop: '1px solid var(--graphite)' }}>
       <div className="container mx-auto px-6 py-12">
         
-        {/* Web3 Address Banner */}
+        {/* Web3 Identity Banner */}
         <div className="text-center py-6 mb-8 border-b" style={{ borderColor: 'var(--graphite)' }}>
-          <p className="text-lg font-semibold" style={{ color: 'var(--gold)', fontFamily: 'var(--font-ui)' }}>
-            Official Web3 address: {web3Alias}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Shield className="w-4 h-4" style={{ color: 'var(--gold)' }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ivory)' }}>
+              Official Web3 Identity
+            </span>
+          </div>
+          <Link 
+            to="/trust"
+            className="inline-flex items-center gap-2 text-lg font-semibold hover:underline transition-colors"
+            style={{ color: 'var(--gold)', fontFamily: 'var(--font-ui)' }}
+          >
+            {web3Alias}
+            <ExternalLink className="w-4 h-4 opacity-60" />
+          </Link>
+          <p className="text-xs mt-2" style={{ color: 'var(--ivory)', opacity: 0.7 }}>
+            Verify our identity on the Trust & Security page
           </p>
         </div>
 
@@ -54,13 +69,13 @@ export function Footer() {
             <ul className="space-y-2">
               {footerLinks.platform.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="hover:underline transition-colors"
+                  <Link
+                    to={link.href}
+                    className="hover:underline transition-colors hover:text-amber-400"
                     style={{ color: 'var(--ivory)', fontFamily: 'var(--font-ui)' }}
                   >
                     {link.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -90,7 +105,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t pt-6 text-center" style={{ borderColor: 'var(--graphite)' }}>
           <p style={{ color: 'var(--ivory)', fontFamily: 'var(--font-ui)' }} className="text-sm">
-            © 2024 LuxLedger. All rights reserved.
+            © 2026 LuxLedger. All rights reserved.
           </p>
         </div>
       </div>

@@ -1,6 +1,20 @@
 import { Handler } from '@netlify/functions';
+import { createClient } from '@supabase/supabase-js';
 import { xrplClient, AssetType, generateAssetSymbol } from '../../src/lib/xrpl-client';
-import { supabase } from '../../src/integrations/supabase/client';
+import {
+  verifyWalletAuth,
+  requireAdmin,
+  checkRateLimit,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 interface MintTokenRequest {
   assetType: AssetType;
@@ -19,23 +33,33 @@ interface MintTokenRequest {
 }
 
 export const handler: Handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit: sensitive operation
+  const clientIP = event.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
+  const rateCheck = checkRateLimit(clientIP, 'sensitive');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many requests', rateCheck.retryAfter);
+  }
+
+  // SECURITY: Minting tokens requires admin privileges
+  const walletAddress = event.headers['x-wallet-address'];
+  const authResult = await verifyWalletAuth(walletAddress, undefined, undefined, supabase);
+  
+  if (!authResult.success) {
+    return errorResponse(authResult.statusCode, authResult.error || 'Authentication failed');
+  }
+
+  const roleCheck = requireAdmin(authResult.context);
+  if (!roleCheck.success) {
+    safeLog('warn', 'Unauthorized mint attempt', { wallet: walletAddress?.slice(0, 10) });
+    return errorResponse(roleCheck.statusCode, roleCheck.error || 'Admin access required');
   }
 
   try {
@@ -43,11 +67,7 @@ export const handler: Handler = async (event, context) => {
 
     // Validate required fields
     if (!assetType || !assetData || !issuerAddress) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing required fields' }),
-      };
+      return errorResponse(400, 'Missing required fields');
     }
 
     // Generate unique asset ID and symbol
@@ -133,24 +153,11 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        data: mintResult,
-      }),
-    };
+    safeLog('info', 'Asset token minted', { assetId: mintResult.assetId, type: mintResult.type });
+    return successResponse({ success: true, data: mintResult });
 
   } catch (error) {
-    console.error('Error minting asset token:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: 'Failed to mint asset token',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      }),
-    };
+    safeLog('error', 'Error minting asset token', { error: (error as Error).message });
+    return errorResponse(500, 'Failed to mint asset token');
   }
 };

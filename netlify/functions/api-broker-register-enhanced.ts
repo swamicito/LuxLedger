@@ -1,5 +1,13 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -17,33 +25,31 @@ function generateReferralCode(): string {
 }
 
 export const handler: Handler = async (event, context) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit: 5 registrations per hour per IP
+  const clientId = getClientIdentifier(event);
+  const rateCheck = checkRateLimit(clientId, 'register');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many registration attempts', rateCheck.retryAfter);
   }
 
   try {
     const { walletAddress } = JSON.parse(event.body || '{}');
 
     if (!walletAddress) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing walletAddress' }),
-      };
+      return errorResponse(400, 'Missing walletAddress');
+    }
+
+    // Validate XRPL address format
+    if (!walletAddress.startsWith('r') || walletAddress.length < 25) {
+      return errorResponse(400, 'Invalid XRPL wallet address');
     }
 
     // Check if broker already exists
@@ -89,12 +95,8 @@ export const handler: Handler = async (event, context) => {
         .single();
 
       if (brokerError) {
-        console.error('Broker creation error:', brokerError);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'Failed to create broker' }),
-        };
+        safeLog('error', 'Broker creation error', { wallet: walletAddress.slice(0, 10) });
+        return errorResponse(500, 'Failed to create broker');
       }
 
       broker = newBroker;
@@ -134,7 +136,7 @@ export const handler: Handler = async (event, context) => {
         });
 
       if (sellerError) {
-        console.error('Seller creation error:', sellerError);
+        safeLog('error', 'Seller creation error', { wallet: walletAddress.slice(0, 10) });
       }
 
       // Update referring broker's seller count
@@ -145,21 +147,18 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        broker,
-        message: 'Broker and seller registered successfully',
-      }),
-    };
+    safeLog('info', 'Broker registered', { referralCode: broker.referral_code });
+    return successResponse({
+      success: true,
+      broker: {
+        id: broker.id,
+        referral_code: broker.referral_code,
+        tier_id: broker.tier_id,
+      },
+      message: 'Broker and seller registered successfully',
+    });
   } catch (error) {
-    console.error('Registration error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    };
+    safeLog('error', 'Registration error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

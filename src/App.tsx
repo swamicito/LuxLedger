@@ -24,12 +24,26 @@ import ReferralDebugger from '@/pages/ReferralDebugger';
 import MarketplacePage from '@/pages/MarketplacePage';
 import BrokerDashboardReal from '@/pages/BrokerDashboardReal';
 import ReferralLanding from '@/pages/ReferralLanding';
+import ListAsset from '@/pages/ListAsset';
+import Settings from '@/pages/Settings';
+import Activity from '@/pages/Activity';
+import MyListings from '@/pages/MyListings';
+import Notifications from '@/pages/Notifications';
+import TransactionDetail from '@/pages/TransactionDetail';
+import Help from '@/pages/Help';
+import UserProfile from '@/pages/UserProfile';
+import Account from '@/pages/Account';
 import { ReferralCookieHandler } from '@/components/ReferralCookieHandler';
 import { WalletAutoRegister } from '@/components/WalletAutoRegister';
 import TermsOfService from '@/pages/TermsOfService';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import Contact from '@/pages/Contact';
+import DisputeCenter from '@/pages/DisputeCenter';
+import ShippingHelp from '@/pages/ShippingHelp';
+import TrustSecurity from '@/pages/TrustSecurity';
 import NotFound from '@/pages/NotFound';
 import Navigation from '@/components/Navigation';
+import { ErrorBoundary } from '@/components/error-boundary';
 import './lib/i18n';
 import './App.css';
 import './styles/brand.css';
@@ -37,17 +51,18 @@ import './styles/brand.css';
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Router>
-      <TooltipProvider>
-        <AuthProvider>
-          <WalletProvider>
-            <EscrowAuthProvider>
-              <ReferralCookieHandler />
-              <WalletAutoRegister />
-              <Navigation />
-              <Toaster />
-              <Routes>
+  <ErrorBoundary showDetails={import.meta.env.DEV}>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <TooltipProvider>
+          <AuthProvider>
+            <WalletProvider>
+              <EscrowAuthProvider>
+                <ReferralCookieHandler />
+                <WalletAutoRegister />
+                <Navigation />
+                <Toaster />
+                <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
@@ -64,17 +79,32 @@ const App = () => (
               <Route path="/ref/:code" element={<ReferralLanding />} />
               <Route path="/asset/:id" element={<AssetDetail />} />
               <Route path="/purchase/:id" element={<AssetPurchase />} />
+              <Route path="/list-asset" element={<ListAsset />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/activity" element={<Activity />} />
+              <Route path="/my-listings" element={<MyListings />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/activity/:id" element={<TransactionDetail />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/u/:username" element={<UserProfile />} />
+              <Route path="/account" element={<Account />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/disputes" element={<DisputeCenter />} />
+              <Route path="/help/shipping" element={<ShippingHelp />} />
+              <Route path="/trust" element={<TrustSecurity />} />
+              <Route path="/security" element={<TrustSecurity />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-            </EscrowAuthProvider>
-          </WalletProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </Router>
-  </QueryClientProvider>
+                </Routes>
+              </EscrowAuthProvider>
+            </WalletProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </Router>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

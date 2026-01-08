@@ -1,10 +1,10 @@
-import { Client, Wallet, xrpToDrops, dropsToXrp } from 'xrpl';
+import { Client, Wallet, xrpToDrops, dropsToXrp, TrustSet, Payment, NFTokenAcceptOffer } from 'xrpl';
 
 // XRPL Client Configuration
 export const XRPL_CONFIG = {
   TESTNET_URL: 'wss://s.altnet.rippletest.net:51233',
   MAINNET_URL: 'wss://xrplcluster.com',
-  NETWORK: process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet',
+  NETWORK: import.meta.env.PROD ? 'mainnet' : 'testnet',
 };
 
 // Asset Types for LuxLedger
@@ -76,7 +76,10 @@ export class XRPLClient {
         ledger_index: 'validated'
       });
       
-      return dropsToXrp(response.result.account_data.Balance);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const balance = (response.result.account_data as any).Balance;
+      // @ts-ignore - Balance type mismatch between XRPL SDK versions
+      return dropsToXrp(balance);
     } catch (error) {
       console.error('Error fetching balance:', error);
       throw new Error('Failed to fetch account balance');
@@ -84,6 +87,7 @@ export class XRPLClient {
   }
 
   // Get account trustlines (for asset tokens)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getAccountTrustlines(address: string): Promise<any[]> {
     await this.connect();
     
@@ -113,7 +117,7 @@ export class XRPLClient {
     try {
       const wallet = Wallet.fromSeed(walletSeed);
       
-      const trustlineTransaction = {
+      const trustlineTransaction: TrustSet = {
         TransactionType: 'TrustSet',
         Account: wallet.address,
         LimitAmount: {
@@ -146,7 +150,7 @@ export class XRPLClient {
     try {
       const issuerWallet = Wallet.fromSeed(issuerSeed);
       
-      const paymentTransaction = {
+      const paymentTransaction: Payment = {
         TransactionType: 'Payment',
         Account: issuerWallet.address,
         Destination: recipientAddress,
@@ -180,6 +184,7 @@ export class XRPLClient {
     try {
       const minterWallet = Wallet.fromSeed(minterSeed);
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const nftMintTransaction: any = {
         TransactionType: 'NFTokenMint',
         Account: minterWallet.address,
@@ -214,6 +219,7 @@ export class XRPLClient {
     try {
       const sellerWallet = Wallet.fromSeed(sellerSeed);
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sellOfferTransaction: any = {
         TransactionType: 'NFTokenCreateOffer',
         Account: sellerWallet.address,
@@ -247,7 +253,7 @@ export class XRPLClient {
     try {
       const buyerWallet = Wallet.fromSeed(buyerSeed);
       
-      const acceptOfferTransaction = {
+      const acceptOfferTransaction: NFTokenAcceptOffer = {
         TransactionType: 'NFTokenAcceptOffer',
         Account: buyerWallet.address,
         NFTokenSellOffer: sellOfferIndex,
@@ -265,6 +271,7 @@ export class XRPLClient {
   }
 
   // Get account NFTs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getAccountNFTs(address: string): Promise<any[]> {
     await this.connect();
     
@@ -283,6 +290,7 @@ export class XRPLClient {
   }
 
   // Get transaction details
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getTransaction(txHash: string): Promise<any> {
     await this.connect();
     

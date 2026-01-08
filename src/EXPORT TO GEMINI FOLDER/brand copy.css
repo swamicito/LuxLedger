@@ -1,0 +1,55 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@600;700&display=swap");
+
+:root {
+  /* LuxLedger Brand Colors */
+  --lux-black: #0A0A0A;
+  --charcoal: #141414;
+  --graphite: #1E1E1F;
+  --ivory: #F8F6F0;
+  --gold: #D4AF37;
+  --gold-deep: #B68E2A;
+  --gold-hi: #F6E27A;
+  --gold-grad: linear-gradient(180deg, #F6E27A 0%, #E0BB4B 35%, #C89A2B 68%, #B68E2A 100%);
+
+  /* Typography */
+  --font-display: "Cormorant Garamond", serif;
+  --font-ui: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+body {
+  background-color: var(--lux-black);
+  color: var(--ivory);
+  font-family: var(--font-ui);
+  font-feature-settings: "tnum" 1;
+}
+
+h1, h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.brand-gold {
+  color: var(--gold);
+}
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--lux-black);
+  font-weight: 600;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-gold:hover {
+  background: var(--gold-deep);
+}
+
+.hero-gradient-text {
+  background: var(--gold-grad);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

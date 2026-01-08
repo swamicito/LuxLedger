@@ -1,6 +1,13 @@
 import { Handler } from '@netlify/functions';
 import { settlementEngine } from '../../src/lib/settlement-engine';
-import { supabase } from '../../src/integrations/supabase/client';
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 interface PurchaseRequest {
   assetId: string;
@@ -13,22 +20,19 @@ interface PurchaseRequest {
 }
 
 export const handler: Handler = async (event, context) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit: sensitive write operation
+  const clientId = getClientIdentifier(event);
+  const rateCheck = checkRateLimit(clientId, 'sensitive');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many purchase requests', rateCheck.retryAfter);
   }
 
   try {
@@ -37,11 +41,19 @@ export const handler: Handler = async (event, context) => {
 
     // Validate required fields
     if (!assetId || !buyerAddress || !amount || !price || !assetType) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing required fields' }),
-      };
+      return errorResponse(400, 'Missing required fields');
+    }
+
+    // Validate wallet authentication
+    const walletHeader = event.headers['x-wallet-address'] || event.headers['x-wallet'];
+    if (!walletHeader) {
+      return errorResponse(401, 'Missing wallet authentication');
+    }
+
+    // Verify the caller is the buyer
+    if (walletHeader !== buyerAddress) {
+      safeLog('warn', 'Purchase: wallet mismatch', { header: walletHeader.slice(0, 10) });
+      return errorResponse(403, 'Wallet address does not match buyer address');
     }
 
     let result;
@@ -58,11 +70,7 @@ export const handler: Handler = async (event, context) => {
     } else if (assetType === 'nft') {
       // Execute NFT purchase
       if (!nftTokenId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'NFT token ID required for NFT purchases' }),
-        };
+        return errorResponse(400, 'NFT token ID required for NFT purchases');
       }
 
       result = await settlementEngine.executeNFTPurchase(
@@ -73,43 +81,23 @@ export const handler: Handler = async (event, context) => {
         price
       );
     } else {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Invalid asset type' }),
-      };
+      return errorResponse(400, 'Invalid asset type');
     }
 
     if (result.success) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          transactionHash: result.transactionHash,
-          message: 'Purchase executed successfully',
-        }),
-      };
+      safeLog('info', 'Purchase executed', { assetId, assetType, txHash: result.transactionHash });
+      return successResponse({
+        success: true,
+        transactionHash: result.transactionHash,
+        message: 'Purchase executed successfully',
+      });
     } else {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: result.error,
-        }),
-      };
+      safeLog('error', 'Purchase failed', { assetId, error: result.error });
+      return errorResponse(400, result.error || 'Purchase failed');
     }
 
   } catch (error) {
-    console.error('Error executing purchase:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: 'Failed to execute purchase',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      }),
-    };
+    safeLog('error', 'Error executing purchase', { error: (error as Error).message });
+    return errorResponse(500, 'Failed to execute purchase');
   }
 };

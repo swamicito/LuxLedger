@@ -363,6 +363,34 @@ export const BrokerDashboard: React.FC = () => {
           </div>
         </motion.div>
 
+        {/* Payout Rules */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-gradient-to-r from-emerald-900/20 to-emerald-800/20 border border-emerald-500/20 rounded-xl p-6"
+        >
+          <h2 className="text-lg font-semibold mb-4 text-emerald-300">Payout Rules</h2>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div className="space-y-1">
+              <p className="font-medium text-white">Minimum Payout</p>
+              <p className="text-gray-400">$50 USD equivalent in XRP</p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium text-white">Payout Schedule</p>
+              <p className="text-gray-400">Weekly (every Monday)</p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium text-white">Commission Hold</p>
+              <p className="text-gray-400">7 days after sale completes</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">
+            Commissions are held for 7 days to account for potential refunds or disputes. 
+            Payouts are sent automatically to your connected XRPL wallet.
+          </p>
+        </motion.div>
+
         {/* Recent Commissions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

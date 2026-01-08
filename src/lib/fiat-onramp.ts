@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/ban-ts-comment */
 // Fiat onramp integration for global payments
 import { geoService } from './geo-utils';
 
@@ -154,8 +155,8 @@ export class FiatOnrampService {
     transakScript.onload = () => {
       // @ts-ignore
       const transak = new window.TransakSDK({
-        apiKey: process.env.VITE_TRANSAK_API_KEY,
-        environment: process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'STAGING',
+        apiKey: import.meta.env.VITE_TRANSAK_API_KEY,
+        environment: import.meta.env.PROD ? 'PRODUCTION' : 'STAGING',
         defaultCryptoCurrency: 'XRP',
         walletAddress: config.userAddress,
         themeColor: '6366f1',
@@ -180,7 +181,7 @@ export class FiatOnrampService {
   }) {
     const baseUrl = 'https://buy.moonpay.com';
     const params = new URLSearchParams({
-      apiKey: process.env.VITE_MOONPAY_API_KEY || '',
+      apiKey: import.meta.env.VITE_MOONPAY_API_KEY || '',
       currencyCode: 'xrp',
       walletAddress: config.userAddress,
       baseCurrencyCode: config.currency || this.userLocation?.currency || 'USD',

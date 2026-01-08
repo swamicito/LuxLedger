@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +10,12 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
 import { useAnalytics } from '@/hooks/use-analytics';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-client';
 import { geoService } from '@/lib/geo-utils';
+import { TrustStrip } from '@/components/ui/trust-strip';
+import { AssetCardSkeleton, LoadingMoreIndicator, EndOfListIndicator } from '@/components/ui/skeleton-loaders';
+import { usePagination } from '@/hooks/use-pagination';
+import { EmptyMarketplace } from '@/components/ui/empty-state';
 import { 
   Search, 
   Filter, 
@@ -40,12 +45,17 @@ const categoryIcons: Record<CategoryKey, any> = {
   collectibles: Gem,
 };
 
+const PAGE_SIZE = 12;
+
 export default function Marketplace() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { trackEvent } = useAnalytics();
   const [assets, setAssets] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedRegion, setSelectedRegion] = useState<string>('global');
@@ -55,11 +65,19 @@ export default function Marketplace() {
   const [userLocation, setUserLocation] = useState<any>(null);
   const [regionalConfig, setRegionalConfig] = useState<any>(null);
 
+  const pagination = usePagination<any>({
+    pageSize: PAGE_SIZE,
+    totalItems: totalCount,
+  });
+
   useEffect(() => {
     initializeRegionalSettings();
-    fetchAssets();
     trackEvent('marketplace_view');
-  }, [selectedCategory, selectedRegion, sortBy]);
+  }, []);
+
+  useEffect(() => {
+    fetchAssets();
+  }, [selectedCategory, selectedRegion, sortBy, pagination.currentPage]);
 
   const initializeRegionalSettings = async () => {
     try {
@@ -73,8 +91,22 @@ export default function Marketplace() {
   };
 
   const fetchAssets = async () => {
-    setLoading(true);
+    const isFirstPage = pagination.currentPage === 1;
+    if (isFirstPage) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    
     try {
+      // Get total count first
+      const { count } = await supabase
+        .from('assets')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['verified', 'tokenized', 'listed']);
+      
+      setTotalCount(count || 0);
+
       let query = supabase
         .from('assets')
         .select(`
@@ -82,7 +114,8 @@ export default function Marketplace() {
           profiles:owner_id (full_name),
           nft_tokens (token_id, contract_address)
         `)
-        .in('status', ['verified', 'tokenized', 'listed']);
+        .in('status', ['verified', 'tokenized', 'listed'])
+        .range(pagination.startIndex, pagination.startIndex + PAGE_SIZE - 1);
 
       if (selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory as CategoryKey);
@@ -115,12 +148,18 @@ export default function Marketplace() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setAssets(data || []);
+      
+      if (isFirstPage) {
+        setAssets(data || []);
+      } else {
+        setAssets(prev => [...prev, ...(data || [])]);
+      }
     } catch (error) {
       console.error('Error fetching assets:', error);
       toast.error('Failed to load assets');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -151,8 +190,14 @@ export default function Marketplace() {
 
   const handleAssetClick = (assetId: string) => {
     trackEvent('asset_view', { asset_id: assetId });
-    // Navigate to asset detail page (to be implemented)
+    navigate(`/asset/${assetId}`);
   };
+
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && pagination.hasNextPage) {
+      pagination.nextPage();
+    }
+  }, [loadingMore, pagination]);
 
   const handleWishlist = (assetId: string) => {
     trackEvent('wishlist_add', { asset_id: assetId });
@@ -174,6 +219,11 @@ export default function Marketplace() {
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               {t('marketplace.subtitle')}
             </p>
+            
+            {/* Trust Strip */}
+            <div className="max-w-4xl mx-auto mt-6">
+              <TrustStrip variant="compact" />
+            </div>
             {regionalConfig?.legalDisclaimer && (
               <div className="max-w-3xl mx-auto p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
@@ -310,15 +360,8 @@ export default function Marketplace() {
           {/* Asset Grid */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="aspect-square bg-muted rounded-t-lg"></div>
-                  <CardContent className="p-4 space-y-2">
-                    <div className="h-4 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </CardContent>
-                </Card>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <AssetCardSkeleton key={i} />
               ))}
             </div>
           ) : (
@@ -437,12 +480,34 @@ export default function Marketplace() {
           )}
 
           {filteredAssets.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <Gem className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No assets found</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search criteria or check back later for new listings.
-              </p>
+            <EmptyMarketplace 
+              onBrowse={() => {
+                setSearchTerm('');
+                setSelectedCategory('all');
+                setSelectedRegion('global');
+                setPriceRange([0, 10000000]);
+              }} 
+            />
+          )}
+
+          {/* Load More / End of List */}
+          {!loading && filteredAssets.length > 0 && (
+            <div className="mt-8">
+              {loadingMore ? (
+                <LoadingMoreIndicator />
+              ) : pagination.hasNextPage ? (
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadMore}
+                    className="px-8"
+                  >
+                    Load More Assets
+                  </Button>
+                </div>
+              ) : (
+                <EndOfListIndicator text="You've seen all available assets" />
+              )}
             </div>
           )}
         </div>

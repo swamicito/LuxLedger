@@ -51,7 +51,7 @@ export const escrowChains: Record<string, EscrowChainConfig> = {
       capUSD: 1500
     },
     explorer: "https://testnet.xrpl.org/accounts/",
-    rpcUrl: process.env.XRPL_RPC_URL || "wss://s.altnet.rippletest.net:51233"
+    rpcUrl: import.meta.env.VITE_XRPL_RPC_URL || "wss://s.altnet.rippletest.net:51233"
   },
 
   solana: {

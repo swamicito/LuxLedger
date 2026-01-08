@@ -216,40 +216,52 @@ export default function BrokerDashboardReal() {
   ) : 0;
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-yellow-600/20 to-yellow-400/20 border-b border-yellow-600/30">
-        <div className="container mx-auto px-6 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-4">
-              <CrownLottie height={56} />
-              <div>
-                <h1 className="text-3xl font-bold">LuxBroker Dashboard</h1>
-                <p className="text-gray-300">
-                  Wallet: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
-                </p>
-              </div>
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Title */}
+            <div>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                LUXBROKER DASHBOARD
+              </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Affiliate earnings · Referral tracking
+              </p>
             </div>
             
-            {broker && (
-              <div className="text-right">
-                <Badge 
-                  className="text-lg px-4 py-2"
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Earnings</p>
+                <p className="text-lg font-semibold" style={{ color: '#22C55E' }}>
+                  ${(stats?.total_commission_usd || 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Referrals</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{stats?.active_sellers || 0}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Tier</p>
+                <span 
+                  className="text-sm font-medium px-2 py-0.5 rounded"
                   style={{ backgroundColor: currentTier.color + '20', color: currentTier.color }}
                 >
                   {currentTier.icon} {currentTier.name}
-                </Badge>
-                <p className="text-sm text-gray-400 mt-1">
-                  Code: {broker.referral_code}
-                </p>
+                </span>
               </div>
-            )}
-          </motion.div>
+            </div>
+            
+            {/* Right: Wallet */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="text-sm font-mono" style={{ color: '#22C55E' }}>
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

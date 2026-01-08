@@ -1,29 +1,35 @@
 /**
  * Netlify Function: Finish XRPL Escrow
  * POST /api/escrow/finish
+ * 
+ * SECURITY: Requires wallet authentication, rate limited
  */
 
 import { Handler } from '@netlify/functions';
 import { xrplEscrowManager } from '../../src/lib/escrow/xrpl';
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 export const handler: Handler = async (event, context) => {
-  // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, x-wallet',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit
+  const clientId = getClientIdentifier(event);
+  const rateCheck = checkRateLimit(clientId, 'escrow');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many escrow requests', rateCheck.retryAfter);
   }
 
   try {
@@ -38,34 +44,26 @@ export const handler: Handler = async (event, context) => {
 
     // Validate required fields
     if (!escrowOwner || !escrowSequence || !finisherAddress) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: 'Missing required fields: escrowOwner, escrowSequence, finisherAddress' 
-        })
-      };
+      return errorResponse(400, 'Missing required fields: escrowOwner, escrowSequence, finisherAddress');
     }
 
     // Validate wallet authentication
-    const walletHeader = event.headers['x-wallet'];
+    const walletHeader = event.headers['x-wallet'] || event.headers['x-wallet-address'];
     if (!walletHeader) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Missing wallet authentication' })
-      };
+      return errorResponse(401, 'Missing wallet authentication');
+    }
+
+    // Verify the caller is the finisher
+    if (walletHeader !== finisherAddress) {
+      safeLog('warn', 'Escrow finish: wallet mismatch', { header: walletHeader.slice(0, 10) });
+      return errorResponse(403, 'Wallet address does not match finisher address');
     }
 
     // Check if escrow can be finished
     const canFinish = await xrplEscrowManager.canFinishEscrow(escrowOwner, escrowSequence);
     
     if (!canFinish.canFinish) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: canFinish.reason,
-          timeRemaining: canFinish.timeRemaining
-        })
-      };
+      return errorResponse(400, canFinish.reason || 'Escrow cannot be finished');
     }
 
     // Finish escrow
@@ -78,36 +76,19 @@ export const handler: Handler = async (event, context) => {
     });
 
     if (result.success) {
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          success: true,
-          txHash: result.txHash,
-          explorerUrl: result.explorerUrl,
-          message: 'Escrow completed successfully - funds released to seller'
-        })
-      };
+      safeLog('info', 'Escrow finished', { escrowSequence, txHash: result.txHash });
+      return successResponse({
+        success: true,
+        txHash: result.txHash,
+        explorerUrl: result.explorerUrl,
+        message: 'Escrow completed successfully - funds released to seller'
+      });
     } else {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          success: false,
-          error: result.error
-        })
-      };
+      safeLog('error', 'Escrow finish failed', { escrowSequence, error: result.error });
+      return errorResponse(500, result.error || 'Escrow finish failed');
     }
   } catch (error) {
-    console.error('Escrow finish error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: (error as Error).message
-      })
-    };
+    safeLog('error', 'Escrow finish error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

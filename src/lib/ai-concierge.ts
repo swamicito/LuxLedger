@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // AI-powered concierge for crypto and platform assistance
 import { geoService } from './geo-utils';
 import { kycComplianceService } from './kyc-compliance';

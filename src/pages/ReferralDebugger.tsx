@@ -216,26 +216,50 @@ export default function ReferralDebugger() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-blue-600/30">
-        <div className="container mx-auto px-6 py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
-          >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Bug className="w-12 h-12 text-blue-400" />
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-                Referral Debugger
-              </h1>
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Title */}
+            <div className="flex items-center gap-3">
+              <Bug className="w-5 h-5" style={{ color: '#D4AF37' }} />
+              <div>
+                <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                  REFERRAL DEBUGGER
+                </h1>
+                <p className="text-sm" style={{ color: '#6B7280' }}>
+                  Debug and test LuxBroker referral flows
+                </p>
+              </div>
             </div>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Debug and test LuxBroker referral flows on testnet
-            </p>
-          </motion.div>
+            
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Results</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{debugResults.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Status</p>
+                <p className="text-sm font-medium" style={{ 
+                  color: debugResults.some(r => r.status === 'error') ? '#EF4444' : 
+                         debugResults.some(r => r.status === 'warning') ? '#FBBF24' : 
+                         debugResults.length > 0 ? '#22C55E' : '#6B7280' 
+                }}>
+                  {debugResults.some(r => r.status === 'error') ? 'Errors' : 
+                   debugResults.some(r => r.status === 'warning') ? 'Warnings' : 
+                   debugResults.length > 0 ? 'Passed' : 'Ready'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Right: Network */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+              <span className="text-sm" style={{ color: '#3B82F6' }}>Testnet</span>
+            </div>
+          </div>
         </div>
       </div>
 

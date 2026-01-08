@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigation } from '@/components/ui/navigation';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/use-auth';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useWallet } from '@/hooks/use-wallet';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-client';
 import { 
   TrendingUp,
   TrendingDown,
@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { EmptyPortfolio, EmptyActivity } from '@/components/ui/empty-state';
+import { AssetCardSkeleton } from '@/components/ui/skeleton-loaders';
 
 type CategoryKey = 'jewelry' | 'watches' | 'art' | 'real_estate' | 'cars' | 'wine' | 'collectibles';
 
@@ -161,14 +163,18 @@ export default function Portfolio() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <div className="min-h-screen bg-black text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <Wallet className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <Wallet className="h-16 w-16 text-gray-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-            <p className="text-muted-foreground mb-6">Please sign in to view your portfolio</p>
-            <Button onClick={() => navigate('/auth')}>Sign In</Button>
+            <p className="text-gray-400 mb-6">Please sign in to view your portfolio</p>
+            <Button 
+              onClick={() => navigate('/auth')}
+              className="bg-amber-500 text-black hover:bg-amber-400"
+            >
+              Sign In
+            </Button>
           </div>
         </div>
       </div>
@@ -176,46 +182,93 @@ export default function Portfolio() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
-          {/* Header */}
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
+            {/* Left: Title */}
             <div>
-              <h1 className="text-3xl font-bold">My Portfolio</h1>
-              <p className="text-muted-foreground">Manage your luxury asset investments</p>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                MY PORTFOLIO
+              </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Manage your luxury asset investments
+              </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Select value={timeframe} onValueChange={setTimeframe}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">7 Days</SelectItem>
-                  <SelectItem value="30d">30 Days</SelectItem>
-                  <SelectItem value="90d">90 Days</SelectItem>
-                </SelectContent>
-              </Select>
-              {!account && (
-                <Button onClick={connectWallet}>
+            
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Total Value</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{formatCurrency(analytics.totalValue || 0)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Assets</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{assets.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Period</p>
+                <Select value={timeframe} onValueChange={setTimeframe}>
+                  <SelectTrigger className="h-7 w-[90px] text-sm bg-transparent border-white/10" style={{ color: '#F5F5F7' }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7d">7 Days</SelectItem>
+                    <SelectItem value="30d">30 Days</SelectItem>
+                    <SelectItem value="90d">90 Days</SelectItem>
+                    <SelectItem value="1y">1 Year</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Right: Wallet Status */}
+            <div className="flex items-center gap-3">
+              {!account ? (
+                <Button 
+                  onClick={connectWallet}
+                  size="sm"
+                  className="font-medium"
+                  style={{ backgroundColor: '#D4AF37', color: '#0B0B0C' }}
+                >
                   <Wallet className="h-4 w-4 mr-2" />
-                  Connect Wallet
+                  Connect
                 </Button>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-mono" style={{ color: '#22C55E' }}>
+                    {account.address?.slice(0, 6)}...{account.address?.slice(-4)}
+                  </span>
+                </div>
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-6 py-8">
+        <div className="space-y-8">
 
           {/* Portfolio Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Value</p>
-                    <p className="text-2xl font-bold">{formatCurrency(analytics.totalValue || 0)}</p>
+                    <p className="text-sm text-gray-400">Total Value</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(analytics.totalValue || 0)}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-primary" />
+                  <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-amber-400" />
+                  </div>
                 </div>
                 {analytics.performance && (
                   <div className={`flex items-center mt-2 ${getPerformanceColor(analytics.performance[timeframe])}`}>
@@ -233,55 +286,61 @@ export default function Portfolio() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Assets</p>
-                    <p className="text-2xl font-bold">{analytics.totalAssets || 0}</p>
+                    <p className="text-sm text-gray-400">Total Assets</p>
+                    <p className="text-2xl font-bold text-white">{analytics.totalAssets || 0}</p>
                   </div>
-                  <PieChart className="h-8 w-8 text-blue-500" />
+                  <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <PieChart className="h-6 w-6 text-blue-400" />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-sm text-gray-400 mt-2">
                   {analytics.tokenizedAssets || 0} tokenized
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Trade Volume</p>
-                    <p className="text-2xl font-bold">{formatCurrency(analytics.totalTradeVolume || 0)}</p>
+                    <p className="text-sm text-gray-400">Trade Volume</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(analytics.totalTradeVolume || 0)}</p>
                   </div>
-                  <BarChart3 className="h-8 w-8 text-green-500" />
+                  <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-green-400" />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-sm text-gray-400 mt-2">
                   {analytics.recentTransactions || 0} transactions
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Wallet Status</p>
-                    <p className="text-lg font-bold">
+                    <p className="text-sm text-gray-400">Wallet Status</p>
+                    <p className="text-lg font-bold text-white">
                       {account ? 'Connected' : 'Disconnected'}
                     </p>
                   </div>
-                  <Wallet className={`h-8 w-8 ${account ? 'text-green-500' : 'text-red-500'}`} />
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${account ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                    <Wallet className={`h-6 w-6 ${account ? 'text-green-400' : 'text-red-400'}`} />
+                  </div>
                 </div>
                 {account && (
-                  <p className="text-sm text-muted-foreground mt-2 truncate">
+                  <p className="text-sm text-gray-400 mt-2 truncate">
                     {account.address}
                   </p>
                 )}
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
           {/* Main Content */}
           <Tabs defaultValue="assets" className="space-y-6">
@@ -304,14 +363,8 @@ export default function Portfolio() {
 
                 {loading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...Array(6)].map((_, i) => (
-                      <Card key={i} className="animate-pulse">
-                        <div className="aspect-square bg-muted rounded-t-lg"></div>
-                        <CardContent className="p-4 space-y-2">
-                          <div className="h-4 bg-muted rounded"></div>
-                          <div className="h-3 bg-muted rounded w-2/3"></div>
-                        </CardContent>
-                      </Card>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <AssetCardSkeleton key={i} />
                     ))}
                   </div>
                 ) : assets.length > 0 ? (
@@ -388,17 +441,7 @@ export default function Portfolio() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Gem className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No assets yet</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Start building your portfolio by adding your first luxury asset.
-                    </p>
-                    <Button onClick={() => navigate('/dashboard')}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Asset
-                    </Button>
-                  </div>
+                  <EmptyPortfolio onBrowse={() => navigate('/marketplace')} />
                 )}
               </div>
             </TabsContent>

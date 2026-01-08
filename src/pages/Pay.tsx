@@ -7,10 +7,10 @@ import { toast } from 'sonner';
 const Pay = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const xlmAddress = process.env.NEXT_PUBLIC_XLM_ADDRESS || 'GBUJKLKAPYCWCFCY6QIY5DHLZRRQ2PVHGYOJE6KLID4KHQNSK534ENZO';
-  const xrpAddress = process.env.NEXT_PUBLIC_XRP_ADDRESS || 'REPLACE_WITH_YOUR_r_ADDRESS';
-  const xrpDestinationTag = process.env.NEXT_PUBLIC_XRP_DESTINATION_TAG || '';
-  const web3Alias = process.env.NEXT_PUBLIC_WEB3_ALIAS || 'luxledger.crypto';
+  const xlmAddress = import.meta.env.VITE_XLM_ADDRESS || 'GBUJKLKAPYCWCFCY6QIY5DHLZRRQ2PVHGYOJE6KLID4KHQNSK534ENZO';
+  const xrpAddress = import.meta.env.VITE_XRP_ADDRESS || 'REPLACE_WITH_YOUR_r_ADDRESS';
+  const xrpDestinationTag = import.meta.env.VITE_XRP_DESTINATION_TAG || '';
+  const web3Alias = import.meta.env.VITE_WEB3_ALIAS || 'luxledger.crypto';
 
   const copyToClipboard = async (text: string, field: string) => {
     try {

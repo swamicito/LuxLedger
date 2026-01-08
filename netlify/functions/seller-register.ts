@@ -5,73 +5,48 @@
 
 import { Handler } from '@netlify/functions';
 import { sellerService, referralService } from '../../src/lib/supabase-client';
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 export const handler: Handler = async (event, context) => {
-  // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Cookie',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit: 5 registrations per hour per IP
+  const clientId = getClientIdentifier(event);
+  const rateCheck = checkRateLimit(clientId, 'register');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many registration attempts', rateCheck.retryAfter);
   }
 
   try {
     const body = JSON.parse(event.body || '{}');
     const { walletAddress } = body;
 
-    // Validate required fields
     if (!walletAddress) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ error: 'Wallet address is required' })
-      };
+      return errorResponse(400, 'Wallet address is required');
     }
 
     // Validate XRPL address format
     if (!walletAddress.startsWith('r') || walletAddress.length < 25) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ error: 'Invalid XRPL wallet address format' })
-      };
+      return errorResponse(400, 'Invalid XRPL wallet address format');
     }
 
     // Check if seller already exists
     const { data: existingSeller } = await sellerService.getByWallet(walletAddress);
     if (existingSeller) {
-      return {
-        statusCode: 409,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          error: 'Seller already registered',
-          referredBy: existingSeller.referred_by
-        })
-      };
+      return errorResponse(409, 'Seller already registered');
     }
 
     // Extract referral code from cookies
@@ -92,18 +67,8 @@ export const handler: Handler = async (event, context) => {
     );
 
     if (error) {
-      console.error('Seller registration error:', error);
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          error: 'Failed to register seller',
-          details: error.message
-        })
-      };
+      safeLog('error', 'Seller registration error', { wallet: walletAddress.slice(0, 10) });
+      return errorResponse(500, 'Failed to register seller');
     }
 
     // Mark referral as converted if applicable
@@ -115,39 +80,18 @@ export const handler: Handler = async (event, context) => {
       await referralService.markConverted(referralCode, clientIP);
     }
 
-    // Return success response
-    return {
-      statusCode: 201,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
+    safeLog('info', 'Seller registered', { sellerId: seller.id });
+    return successResponse({
+      success: true,
+      seller: {
+        id: seller.id,
+        walletAddress: seller.wallet_address,
       },
-      body: JSON.stringify({
-        success: true,
-        seller: {
-          id: seller.id,
-          walletAddress: seller.wallet_address,
-          referredBy: seller.referred_by,
-          referralLocked: seller.referral_locked_until
-        },
-        message: referralCode 
-          ? `Successfully registered with referral from ${referralCode}`
-          : 'Successfully registered as seller'
-      })
-    };
+      message: 'Successfully registered as seller'
+    }, 201);
 
   } catch (error) {
-    console.error('Seller registration error:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: (error as Error).message
-      })
-    };
+    safeLog('error', 'Seller registration error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

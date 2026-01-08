@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigation } from '@/components/ui/navigation';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { ChatbotToggle } from '@/components/ui/ai-chatbot';
 import { useAuth } from '@/hooks/use-auth';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useWallet } from '@/hooks/use-wallet';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-client';
 import { 
   TrendingUp,
   TrendingDown,
@@ -268,14 +268,18 @@ export default function Trading() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <div className="min-h-screen bg-black text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <Activity className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <Activity className="h-16 w-16 text-gray-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-            <p className="text-muted-foreground mb-6">Please sign in to access trading features</p>
-            <Button onClick={() => navigate('/auth')}>Sign In</Button>
+            <p className="text-gray-400 mb-6">Please sign in to access trading features</p>
+            <Button 
+              onClick={() => navigate('/auth')}
+              className="bg-amber-500 text-black hover:bg-amber-400"
+            >
+              Sign In
+            </Button>
           </div>
         </div>
       </div>
@@ -283,82 +287,78 @@ export default function Trading() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          {/* Header */}
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header - Matte black, minimal, data-aware */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
+            {/* Left: Title */}
             <div>
-              <h1 className="text-3xl font-bold">Trading Terminal</h1>
-              <p className="text-muted-foreground">Trade tokenized luxury assets in real-time</p>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                TRADING TERMINAL
+              </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Tokenized luxury assets · Real-time execution
+              </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" onClick={fetchTradingData}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+            
+            {/* Center: Market Status */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>24h Volume</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>
+                  {formatCompactCurrency(marketData.reduce((sum, m) => sum + m.volume24h, 0))}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Active Markets</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{marketData.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Status</p>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <p className="text-sm font-medium" style={{ color: '#22C55E' }}>Live</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={fetchTradingData}
+                className="text-gray-400 hover:text-white hover:bg-white/5"
+              >
+                <RefreshCw className="h-4 w-4" />
               </Button>
-              {!account && (
-                <Button onClick={connectWallet}>
+              {!account ? (
+                <Button 
+                  onClick={connectWallet}
+                  size="sm"
+                  className="font-medium"
+                  style={{ backgroundColor: '#D4AF37', color: '#0B0B0C' }}
+                >
                   <Wallet className="h-4 w-4 mr-2" />
-                  Connect Wallet
+                  Connect
                 </Button>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-mono" style={{ color: '#22C55E' }}>
+                    {account.address?.slice(0, 6)}...{account.address?.slice(-4)}
+                  </span>
+                </div>
               )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Market Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">24h Volume</p>
-                    <p className="text-xl font-bold">
-                      {formatCompactCurrency(marketData.reduce((sum, m) => sum + m.volume24h, 0))}
-                    </p>
-                  </div>
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
+      <div className="container mx-auto px-6 py-8">
+        <div className="space-y-6">
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Active Markets</p>
-                    <p className="text-xl font-bold">{marketData.length}</p>
-                  </div>
-                  <Activity className="h-6 w-6 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Open Orders</p>
-                    <p className="text-xl font-bold">{userOrders.filter(o => o.status === 'open').length}</p>
-                  </div>
-                  <Clock className="h-6 w-6 text-yellow-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Wallet</p>
-                    <p className="text-xl font-bold">{account ? 'Connected' : 'Disconnected'}</p>
-                  </div>
-                  <Wallet className={`h-6 w-6 ${account ? 'text-green-500' : 'text-red-500'}`} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* DEX Trading Interface */}
           <DEXTradingInterface />

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { xrplClient, AssetType, AssetToken, generateAssetSymbol } from './xrpl-client';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-client';
 
 // Asset Management Service
 export class AssetManager {

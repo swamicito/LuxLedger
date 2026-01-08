@@ -1,29 +1,35 @@
 /**
  * Netlify Function: Create XRPL Escrow
  * POST /api/escrow/create
+ * 
+ * SECURITY: Requires wallet authentication, rate limited
  */
 
 import { Handler } from '@netlify/functions';
 import { xrplEscrowManager } from '../../src/lib/escrow/xrpl';
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 export const handler: Handler = async (event, context) => {
-  // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, x-wallet',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit: 10 escrow ops per minute
+  const clientId = getClientIdentifier(event);
+  const rateCheck = checkRateLimit(clientId, 'escrow');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many escrow requests', rateCheck.retryAfter);
   }
 
   try {
@@ -42,44 +48,33 @@ export const handler: Handler = async (event, context) => {
 
     // Validate required fields
     if (!amountUSD || !buyerAddress || !sellerAddress) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: 'Missing required fields: amountUSD, buyerAddress, sellerAddress' 
-        })
-      };
+      return errorResponse(400, 'Missing required fields: amountUSD, buyerAddress, sellerAddress');
     }
 
-    // Validate wallet authentication (simplified)
-    const walletHeader = event.headers['x-wallet'];
+    // Validate wallet authentication
+    const walletHeader = event.headers['x-wallet'] || event.headers['x-wallet-address'];
     if (!walletHeader) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Missing wallet authentication' })
-      };
+      return errorResponse(401, 'Missing wallet authentication');
     }
 
-    // Enhanced validation based on your examples
+    // Verify the caller is the buyer (only buyer can create escrow)
+    if (walletHeader !== buyerAddress) {
+      safeLog('warn', 'Escrow create: wallet mismatch', { header: walletHeader.slice(0, 10), buyer: buyerAddress.slice(0, 10) });
+      return errorResponse(403, 'Wallet address does not match buyer address');
+    }
+
+    // Validate amount
     if (typeof amountUSD !== 'number' || amountUSD < 100) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Minimum escrow amount is $100 USD' })
-      };
+      return errorResponse(400, 'Minimum escrow amount is $100 USD');
     }
 
     if (amountUSD > 10_000_000) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Maximum escrow amount is $10M USD' })
-      };
+      return errorResponse(400, 'Maximum escrow amount is $10M USD');
     }
 
     // Validate XRPL addresses
     if (!buyerAddress.startsWith('r') || !sellerAddress.startsWith('r')) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Invalid XRPL address format' })
-      };
+      return errorResponse(400, 'Invalid XRPL address format');
     }
 
     // Create escrow
@@ -96,38 +91,20 @@ export const handler: Handler = async (event, context) => {
     });
 
     if (result.success) {
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          success: true,
-          escrowId: result.txHash,
-          txHash: result.txHash,
-          escrowSequence: result.escrowSequence,
-          explorerUrl: result.explorerUrl,
-          metadata: result.metadata
-        })
-      };
+      safeLog('info', 'Escrow created', { escrowSequence: result.escrowSequence, assetId });
+      return successResponse({
+        success: true,
+        escrowId: result.txHash,
+        txHash: result.txHash,
+        escrowSequence: result.escrowSequence,
+        explorerUrl: result.explorerUrl,
+      });
     } else {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          success: false,
-          error: result.error
-        })
-      };
+      safeLog('error', 'Escrow creation failed', { error: result.error });
+      return errorResponse(500, result.error || 'Escrow creation failed');
     }
   } catch (error) {
-    console.error('Escrow creation error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: (error as Error).message
-      })
-    };
+    safeLog('error', 'Escrow creation error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

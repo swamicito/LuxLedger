@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { geoService } from './geo-utils';
 import { kycComplianceService } from './kyc-compliance';
 

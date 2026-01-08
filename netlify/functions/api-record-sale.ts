@@ -7,6 +7,7 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { payCommissions } from '../../src/lib/luxbroker/xrpl-commission';
 import { TierSystem, createTierUpgradeNotification } from '../../src/lib/luxbroker/tier-system';
+import { safeLog } from '../../src/lib/security';
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Handle CORS
@@ -164,7 +165,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     };
 
   } catch (error) {
-    console.error('Record sale error:', error);
+    safeLog('error', 'Record sale error', { error: (error as Error).message });
     return {
       statusCode: 500,
       headers: {

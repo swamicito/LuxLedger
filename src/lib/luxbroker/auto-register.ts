@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Auto-register seller functionality
  * Automatically registers sellers when they connect their wallet

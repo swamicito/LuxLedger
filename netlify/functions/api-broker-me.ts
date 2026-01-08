@@ -1,5 +1,15 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import {
+  verifyWalletAuth,
+  requireBroker,
+  requireOwnership,
+  checkRateLimit,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -7,33 +17,34 @@ const supabase = createClient(
 );
 
 export const handler: Handler = async (event, context) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Wallet-Address',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit
+  const clientIP = event.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
+  const rateCheck = checkRateLimit(clientIP, 'default');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many requests', rateCheck.retryAfter);
   }
 
   try {
     const walletAddress = event.headers['x-wallet-address'];
 
-    if (!walletAddress) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing wallet address header' }),
-      };
+    // Authenticate via wallet
+    const authResult = await verifyWalletAuth(walletAddress, undefined, undefined, supabase);
+    if (!authResult.success) {
+      return errorResponse(authResult.statusCode, authResult.error || 'Authentication failed');
+    }
+
+    // Require broker role
+    const roleCheck = requireBroker(authResult.context);
+    if (!roleCheck.success) {
+      return errorResponse(roleCheck.statusCode, roleCheck.error || 'Broker access required');
     }
 
     // Fetch broker profile
@@ -44,11 +55,13 @@ export const handler: Handler = async (event, context) => {
       .single();
 
     if (brokerError || !broker) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: 'Broker not found' }),
-      };
+      return errorResponse(404, 'Broker not found');
+    }
+
+    // Verify ownership - brokers can only view their own data
+    const ownershipCheck = requireOwnership(authResult.context, broker.wallet_address);
+    if (!ownershipCheck.success) {
+      return errorResponse(ownershipCheck.statusCode, ownershipCheck.error || 'Access denied');
     }
 
     // Fetch commission stats
@@ -63,20 +76,9 @@ export const handler: Handler = async (event, context) => {
       active_sellers: broker.referred_sellers_count || 0,
     };
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        broker,
-        stats,
-      }),
-    };
+    return successResponse({ broker, stats });
   } catch (error) {
-    console.error('Broker profile error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    };
+    safeLog('error', 'Broker profile error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

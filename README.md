@@ -256,6 +256,45 @@ For support and questions:
 - [ ] Institutional investor tools
 - [ ] DeFi integrations
 
+## ⚡ Performance Guardrails
+
+This application is designed to handle millions of listings. Follow these rules to maintain performance:
+
+### Data Fetching Rules
+1. **Never load full lists** - All queries MUST use `.limit()` or `.range()` with a maximum of 60 items
+2. **Always select only needed columns** - Avoid `SELECT *`; specify columns explicitly
+3. **Avoid client-side filtering at scale** - Push filters to the database via query parameters
+4. **Use cursor-based pagination** for infinite scroll scenarios (see `use-cursor-pagination.ts`)
+
+### Pagination Constants
+```typescript
+import { DEFAULT_LIMIT, MAX_LIMIT, safeLimit } from '@/hooks/use-pagination';
+
+// DEFAULT_LIMIT = 24 (default page size)
+// MAX_LIMIT = 60 (hard cap, never exceed)
+```
+
+### Query Pattern
+```typescript
+// ✅ Good - bounded query with specific columns
+const { data } = await supabase
+  .from('assets')
+  .select('id, title, images, estimated_value, status, created_at')
+  .eq('status', 'live')
+  .order('created_at', { ascending: false })
+  .range(0, 23);
+
+// ❌ Bad - unbounded query with SELECT *
+const { data } = await supabase
+  .from('assets')
+  .select('*');
+```
+
+### List Components
+- Use `LoadingMoreIndicator` and `EndOfListIndicator` from `@/components/ui/skeleton-loaders`
+- Use stable keys (item IDs, not array indices)
+- Memoize heavy card components with `React.memo()`
+
 ---
 
 **LuxLedger** - Redefining luxury asset ownership through blockchain technology.

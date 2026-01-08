@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { xrplClient } from './xrpl-client';
 import { assetManager } from './asset-manager';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-client';
 
 // Settlement Engine for Atomic Transactions
 export class SettlementEngine {

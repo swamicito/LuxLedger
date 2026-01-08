@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import realEstateIcon from "@/assets/real-estate-icon.jpg";
 import jewelryIcon from "@/assets/jewelry-icon.jpg";
 import carsIcon from "@/assets/cars-icon.jpg";
 
 export function AssetCategories() {
+  const navigate = useNavigate();
+  
   const categories = [
     {
       title: "Premium Real Estate",
@@ -12,7 +15,8 @@ export function AssetCategories() {
       image: realEstateIcon,
       value: "$2.4B+",
       growth: "+23%",
-      items: "1,247 Properties"
+      items: "1,247 Properties",
+      filterCategory: "real_estate"
     },
     {
       title: "Exquisite Jewelry",
@@ -20,7 +24,8 @@ export function AssetCategories() {
       image: jewelryIcon,
       value: "$890M+",
       growth: "+18%",
-      items: "3,891 Items"
+      items: "3,891 Items",
+      filterCategory: "jewelry"
     },
     {
       title: "Exotic Vehicles",
@@ -28,7 +33,8 @@ export function AssetCategories() {
       image: carsIcon,
       value: "$1.1B+",
       growth: "+31%",
-      items: "892 Vehicles"
+      items: "892 Vehicles",
+      filterCategory: "cars"
     }
   ];
 
@@ -88,6 +94,7 @@ export function AssetCategories() {
                   <Button 
                     variant="outline" 
                     className="btn-luxury-outline group-hover:bg-primary group-hover:text-primary-foreground"
+                    onClick={() => navigate(`/marketplace?category=${category.filterCategory}`)}
                   >
                     Explore
                     <ArrowRight className="w-4 h-4 ml-2" />

@@ -1,6 +1,15 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { quoteFees } from '../../src/api/fees';
+import { quoteFees } from '../../src/lib/fees';
+import {
+  verifyWalletAuth,
+  requireSeller,
+  checkRateLimit,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -11,23 +20,36 @@ const supabase = createClient(
 const BROKER_COMMISSION_RATE = Number(process.env.LUXBROKER_COMMISSION_RATE || '0.30');
 
 export const handler: Handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-
+  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Get client IP for rate limiting
+  const clientIP = event.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
+  
+  // Rate limit: 20 writes per minute
+  const rateCheck = checkRateLimit(clientIP, 'write');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many requests', rateCheck.retryAfter);
+  }
+
+  // Authenticate via wallet
+  const walletAddress = event.headers['x-wallet-address'];
+  const authResult = await verifyWalletAuth(walletAddress, undefined, undefined, supabase);
+  
+  if (!authResult.success) {
+    return errorResponse(authResult.statusCode, authResult.error || 'Authentication failed');
+  }
+
+  // Require seller or admin role for recording sales
+  const roleCheck = requireSeller(authResult.context);
+  if (!roleCheck.success) {
+    return errorResponse(roleCheck.statusCode, roleCheck.error || 'Insufficient permissions');
   }
 
   try {
@@ -41,11 +63,7 @@ export const handler: Handler = async (event, context) => {
     } = JSON.parse(event.body || '{}');
 
     if (!sellerWallet || !amountUSD) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing sellerWallet or amountUSD' }),
-      };
+      return errorResponse(400, 'Missing sellerWallet or amountUSD');
     }
 
     // 1) Calculate platform fee using full fees engine
@@ -66,11 +84,7 @@ export const handler: Handler = async (event, context) => {
       .single();
 
     if (sellerError || !seller) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: 'Seller not found' }),
-      };
+      return errorResponse(404, 'Seller not found');
     }
 
     let brokerId = seller.referred_by_broker_id;
@@ -108,12 +122,8 @@ export const handler: Handler = async (event, context) => {
         });
 
       if (commissionError) {
-        console.error('Commission insert error:', commissionError);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'Failed to record commission' }),
-        };
+        safeLog('error', 'Commission insert error', { brokerId, sellerId: seller.id });
+        return errorResponse(500, 'Failed to record commission');
       }
 
       // 5) Update broker stats
@@ -124,35 +134,29 @@ export const handler: Handler = async (event, context) => {
       });
 
       if (updateError) {
-        console.error('Broker stats update error:', updateError);
+        safeLog('error', 'Broker stats update error', { brokerId });
       }
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        sellerId: seller.id,
-        brokerId,
-        saleAmountUSD: Number(amountUSD),
-        platformFeeUSD,
-        commissionUSD,
-        commissionRate: BROKER_COMMISSION_RATE,
-        feeBreakdown: {
-          buyerFeeUSD: quote.buyerFeeUSD,
-          sellerFeeUSD: quote.sellerFeeUSD,
-          platformFeeUSD: quote.platformFeeUSD,
-          notes: quote.notes,
-        },
-      }),
-    };
+    safeLog('info', 'Sale recorded successfully', { sellerId: seller.id, brokerId });
+    
+    return successResponse({
+      success: true,
+      sellerId: seller.id,
+      brokerId,
+      saleAmountUSD: Number(amountUSD),
+      platformFeeUSD,
+      commissionUSD,
+      commissionRate: BROKER_COMMISSION_RATE,
+      feeBreakdown: {
+        buyerFeeUSD: quote.buyerFeeUSD,
+        sellerFeeUSD: quote.sellerFeeUSD,
+        platformFeeUSD: quote.platformFeeUSD,
+        notes: quote.notes,
+      },
+    });
   } catch (error) {
-    console.error('Sale recording error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    };
+    safeLog('error', 'Sale recording error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

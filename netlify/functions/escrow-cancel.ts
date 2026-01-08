@@ -1,29 +1,35 @@
 /**
  * Netlify Function: Cancel XRPL Escrow
  * POST /api/escrow/cancel
+ * 
+ * SECURITY: Requires wallet authentication, rate limited
  */
 
 import { Handler } from '@netlify/functions';
 import { xrplEscrowManager } from '../../src/lib/escrow/xrpl';
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  safeLog,
+  CORS_HEADERS,
+  errorResponse,
+  successResponse,
+} from '../../src/lib/security';
 
 export const handler: Handler = async (event, context) => {
-  // Handle CORS
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, x-wallet',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return errorResponse(405, 'Method not allowed');
+  }
+
+  // Rate limit
+  const clientId = getClientIdentifier(event);
+  const rateCheck = checkRateLimit(clientId, 'escrow');
+  if (!rateCheck.allowed) {
+    return errorResponse(429, 'Too many escrow requests', rateCheck.retryAfter);
   }
 
   try {
@@ -37,31 +43,26 @@ export const handler: Handler = async (event, context) => {
 
     // Validate required fields
     if (!escrowOwner || !escrowSequence || !cancellerAddress) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: 'Missing required fields: escrowOwner, escrowSequence, cancellerAddress' 
-        })
-      };
+      return errorResponse(400, 'Missing required fields: escrowOwner, escrowSequence, cancellerAddress');
     }
 
     // Validate wallet authentication
-    const walletHeader = event.headers['x-wallet'];
+    const walletHeader = event.headers['x-wallet'] || event.headers['x-wallet-address'];
     if (!walletHeader) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Missing wallet authentication' })
-      };
+      return errorResponse(401, 'Missing wallet authentication');
+    }
+
+    // Verify the caller is the canceller
+    if (walletHeader !== cancellerAddress) {
+      safeLog('warn', 'Escrow cancel: wallet mismatch', { header: walletHeader.slice(0, 10) });
+      return errorResponse(403, 'Wallet address does not match canceller address');
     }
 
     // Check if escrow exists and can be cancelled
     const escrowDetails = await xrplEscrowManager.getEscrowDetails(escrowOwner, escrowSequence);
     
     if (!escrowDetails) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Escrow not found' })
-      };
+      return errorResponse(404, 'Escrow not found');
     }
 
     // Check if cancellation is allowed (after expiration or dispute)
@@ -69,14 +70,7 @@ export const handler: Handler = async (event, context) => {
     const cancelAfter = escrowDetails.CancelAfter;
     
     if (now < cancelAfter && !reason?.includes('dispute')) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: 'Escrow cannot be cancelled before expiration time',
-          cancelAfter: cancelAfter,
-          timeRemaining: cancelAfter - now
-        })
-      };
+      return errorResponse(400, 'Escrow cannot be cancelled before expiration time');
     }
 
     // Cancel escrow
@@ -87,37 +81,20 @@ export const handler: Handler = async (event, context) => {
     });
 
     if (result.success) {
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          success: true,
-          txHash: result.txHash,
-          explorerUrl: result.explorerUrl,
-          message: 'Escrow cancelled successfully - funds returned to buyer',
-          reason: reason || 'Expired'
-        })
-      };
+      safeLog('info', 'Escrow cancelled', { escrowSequence, reason: reason || 'Expired' });
+      return successResponse({
+        success: true,
+        txHash: result.txHash,
+        explorerUrl: result.explorerUrl,
+        message: 'Escrow cancelled successfully - funds returned to buyer',
+        reason: reason || 'Expired'
+      });
     } else {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          success: false,
-          error: result.error
-        })
-      };
+      safeLog('error', 'Escrow cancel failed', { escrowSequence, error: result.error });
+      return errorResponse(500, result.error || 'Escrow cancel failed');
     }
   } catch (error) {
-    console.error('Escrow cancel error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: (error as Error).message
-      })
-    };
+    safeLog('error', 'Escrow cancel error', { error: (error as Error).message });
+    return errorResponse(500, 'Internal server error');
   }
 };

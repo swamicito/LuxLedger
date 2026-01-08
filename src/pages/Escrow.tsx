@@ -99,20 +99,44 @@ export default function Escrow() {
   const feeDetails = calculateFees();
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--lux-black)' }}>
-      <div className="container mx-auto px-6 py-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)' }}>
-              <Shield className="w-10 h-10" style={{ color: 'var(--lux-black)' }} />
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Title */}
+            <div>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                LUXGUARD ESCROW
+              </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Secure, dispute-resilient transfers for high-value assets
+              </p>
             </div>
-            <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--ivory)', fontFamily: 'var(--font-display)' }}>
-              Start a Secured Transaction
-            </h1>
-            <p className="text-xl opacity-80" style={{ color: 'var(--ivory)' }}>
-              LuxGuard Escrow ensures secure, dispute-resilient transfers for high-value assets.
-            </p>
+            
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Protection</p>
+                <p className="text-sm font-medium" style={{ color: '#F5F5F7' }}>Blockchain Escrow</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Network</p>
+                <p className="text-sm font-medium" style={{ color: '#F5F5F7' }}>XRPL</p>
+              </div>
+            </div>
+            
+            {/* Right: Status */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+              <Shield className="w-4 h-4" style={{ color: '#22C55E' }} />
+              <span className="text-sm" style={{ color: '#22C55E' }}>Secured</span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto">
 
           {currentStep === 1 && (
             <Card style={{ background: 'var(--lux-dark-gray)', border: '1px solid rgba(212, 175, 55, 0.2)' }}>

@@ -302,10 +302,10 @@ Congratulations on reaching the next level! 🏆
  * Default notification service instance
  */
 export const notificationService = new NotificationService({
-  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
-  telegramChatId: process.env.TELEGRAM_CHAT_ID,
+  telegramBotToken: import.meta.env.VITE_TELEGRAM_BOT_TOKEN,
+  telegramChatId: import.meta.env.VITE_TELEGRAM_CHAT_ID,
   emailProvider: 'sendgrid',
-  emailApiKey: process.env.SENDGRID_API_KEY,
+  emailApiKey: import.meta.env.VITE_SENDGRID_API_KEY,
   fromEmail: 'notifications@luxledger.app',
 });
 

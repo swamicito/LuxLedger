@@ -1,14 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Supabase Client Configuration for LuxBroker
  * World-class database client with type safety
  */
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database as GeneratedDatabase } from '@/integrations/supabase/types';
 
-// Database types for type safety
-export interface Database {
-  public: {
-    Tables: {
+// Compose generated Supabase types with LuxBroker tables used by services below
+type ExtendedDatabase = GeneratedDatabase & {
+  public: GeneratedDatabase['public'] & {
+    Tables: GeneratedDatabase['public']['Tables'] & {
       brokers: {
         Row: {
           id: string;
@@ -136,7 +138,7 @@ export interface Database {
         };
       };
     };
-    Views: {
+    Views: GeneratedDatabase['public']['Views'] & {
       broker_analytics: {
         Row: {
           id: string;
@@ -155,12 +157,14 @@ export interface Database {
       };
     };
   };
-}
+};
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export type Database = ExtendedDatabase;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper function to set wallet context for RLS
 export const setWalletContext = async (walletAddress: string) => {
@@ -369,4 +373,3 @@ export const referralService = {
   }
 };
 
-export type { Database };

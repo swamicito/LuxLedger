@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // KYC and compliance management for global operations
 import { geoService } from './geo-utils';
 

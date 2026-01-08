@@ -379,9 +379,9 @@ export async function payCommissions(
   brokerReferralCode?: string
 ): Promise<{ success: boolean; transactions: string[]; commissionId?: string; error?: string }> {
   const manager = new XRPLCommissionManager(
-    process.env.XRPL_RPC_URL,
-    process.env.XRPL_ESCROW_SEED,
-    process.env.XRPL_PLATFORM_WALLET
+    import.meta.env.VITE_XRPL_RPC_URL,
+    import.meta.env.VITE_XRPL_ESCROW_SEED,
+    import.meta.env.VITE_XRPL_PLATFORM_WALLET
   );
   
   const split = await manager.calculateCommissionSplit(saleAmountUSD, sellerWallet, brokerReferralCode);

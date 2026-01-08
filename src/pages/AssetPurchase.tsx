@@ -27,6 +27,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { TrustBadge, TrustSignalsPanel } from '@/components/ui/trust-signals';
+import { FeeBreakdown, DualPrice } from '@/components/ui/fee-breakdown';
+import { EscapeHatches, ContextualHelp } from '@/components/ui/escape-hatches';
 
 interface Asset {
   id: string;
@@ -309,8 +312,8 @@ export default function AssetPurchase() {
                 {asset.title}
               </h1>
               
-              <div className="text-3xl font-bold mb-6" style={{ color: 'var(--lux-gold)' }}>
-                {formatCurrency(asset.estimated_value)}
+              <div className="mb-6">
+                <DualPrice amountUSD={asset.estimated_value} size="lg" />
               </div>
             </div>
 
@@ -355,6 +358,12 @@ export default function AssetPurchase() {
             {/* Escrow Option */}
             {purchaseStep === 'details' && (
               <div className="space-y-6">
+                {/* Trust Signals */}
+                <div className="space-y-3">
+                  <TrustBadge variant="escrow" />
+                  <TrustBadge variant="custody" />
+                </div>
+
                 <EscrowToggle
                   amountUSD={asset.estimated_value}
                   chain={selectedChain}
@@ -392,6 +401,9 @@ export default function AssetPurchase() {
                   </div>
                 )}
 
+                {/* Fee Breakdown */}
+                <FeeBreakdown subtotalUSD={asset.estimated_value} />
+
                 {/* Purchase Buttons */}
                 <div className="space-y-4">
                   <Button
@@ -415,6 +427,14 @@ export default function AssetPurchase() {
                     </div>
                   )}
                 </div>
+
+                {/* Escape Hatches */}
+                <EscapeHatches
+                  onCancel={() => navigate('/marketplace')}
+                  cancelLabel="Cancel and return"
+                  helpContext="purchase"
+                  showSave={false}
+                />
               </div>
             )}
 

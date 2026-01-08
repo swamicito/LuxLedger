@@ -12,7 +12,41 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { AssetType } from '@/lib/xrpl-client';
 import { assetManager } from '@/lib/asset-manager';
-import { Plus, Upload, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Upload, Eye, Edit, Trash2, Flag, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
+
+// Mock moderation queue data
+const mockModerationQueue = [
+  {
+    id: 'mod_001',
+    type: 'listing',
+    title: 'Suspicious Rolex Listing',
+    reason: 'Reported as potential counterfeit',
+    reportedBy: 'user_456',
+    reportedAt: '2024-01-18T10:30:00Z',
+    status: 'pending',
+    itemId: 'asset_123',
+  },
+  {
+    id: 'mod_002',
+    type: 'user',
+    title: 'Multiple failed verification attempts',
+    reason: 'User submitted 3 rejected KYC documents',
+    reportedBy: 'system',
+    reportedAt: '2024-01-19T14:00:00Z',
+    status: 'pending',
+    itemId: 'user_789',
+  },
+  {
+    id: 'mod_003',
+    type: 'listing',
+    title: 'Price manipulation suspected',
+    reason: 'Listing price changed 5 times in 24 hours',
+    reportedBy: 'system',
+    reportedAt: '2024-01-20T09:15:00Z',
+    status: 'reviewed',
+    itemId: 'asset_456',
+  },
+];
 
 const Admin = () => {
   const { user, userRole, loading } = useAuth();
@@ -20,6 +54,7 @@ const Admin = () => {
   const [assets, setAssets] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [moderationQueue, setModerationQueue] = useState(mockModerationQueue);
 
   // Form state for creating new assets
   const [newAsset, setNewAsset] = useState({
@@ -140,22 +175,64 @@ const Admin = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">LuxLedger Admin Panel</h1>
-        <p className="text-gray-600 mt-2">Manage luxury assets and marketplace operations</p>
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Title */}
+            <div>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                ADMIN PANEL
+              </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Asset management · Moderation · Operations
+              </p>
+            </div>
+            
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Assets</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{assets.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Pending</p>
+                <p className="text-lg font-semibold" style={{ color: '#FBBF24' }}>
+                  {moderationQueue.filter(m => m.status === 'pending').length}
+                </p>
+              </div>
+            </div>
+            
+            {/* Right: Status */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+              <span className="text-sm" style={{ color: '#EF4444' }}>Admin</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <div className="container mx-auto px-6 py-6">
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="moderation" className="relative">
+            Moderation
+            {moderationQueue.filter(m => m.status === 'pending').length > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs flex items-center justify-center text-white">
+                {moderationQueue.filter(m => m.status === 'pending').length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="create">Create Asset</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
@@ -197,7 +274,113 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
+                <Flag className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-500">
+                  {moderationQueue.filter(m => m.status === 'pending').length}
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="moderation" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Flag className="h-5 w-5 text-orange-500" />
+                Moderation Queue
+              </CardTitle>
+              <CardDescription>Review flagged content and user reports</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {moderationQueue.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                    <p>No items pending review</p>
+                  </div>
+                ) : (
+                  moderationQueue.map((item) => (
+                    <div key={item.id} className="flex items-start justify-between p-4 border rounded-lg">
+                      <div className="flex items-start space-x-4">
+                        <div className={`p-2 rounded-full ${
+                          item.status === 'pending' ? 'bg-orange-100' : 'bg-green-100'
+                        }`}>
+                          {item.status === 'pending' ? (
+                            <AlertTriangle className="h-5 w-5 text-orange-600" />
+                          ) : (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{item.title}</h3>
+                            <Badge variant={item.type === 'listing' ? 'default' : 'secondary'}>
+                              {item.type}
+                            </Badge>
+                            <Badge variant={item.status === 'pending' ? 'destructive' : 'outline'}>
+                              {item.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{item.reason}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(item.reportedAt).toLocaleDateString()}
+                            </span>
+                            <span>Reported by: {item.reportedBy}</span>
+                            <span>ID: {item.itemId}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Review
+                        </Button>
+                        {item.status === 'pending' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-green-600 hover:bg-green-50"
+                              onClick={() => {
+                                setModerationQueue(prev => 
+                                  prev.map(m => m.id === item.id ? {...m, status: 'approved'} : m)
+                                );
+                                toast.success('Item approved');
+                              }}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setModerationQueue(prev => 
+                                  prev.map(m => m.id === item.id ? {...m, status: 'rejected'} : m)
+                                );
+                                toast.success('Item rejected');
+                              }}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="assets" className="space-y-6">
@@ -386,6 +569,7 @@ const Admin = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 };

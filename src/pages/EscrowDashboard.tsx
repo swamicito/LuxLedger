@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useEscrowAuth, useEscrowWallet } from '@/hooks/use-escrow-auth';
 import { 
   Clock, 
@@ -13,9 +14,12 @@ import {
   ExternalLink,
   Filter,
   Search,
-  RefreshCw
+  RefreshCw,
+  Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { TrustBadge } from '@/components/ui/trust-signals';
+import { ContextualHelp } from '@/components/ui/escape-hatches';
 
 interface EscrowItem {
   id: string;
@@ -63,6 +67,7 @@ const mockEscrows: EscrowItem[] = [
 ];
 
 export default function EscrowDashboard() {
+  const navigate = useNavigate();
   const { walletAddress } = useEscrowAuth();
   const { getEscrowStatus, finishEscrow, cancelEscrow } = useEscrowWallet();
   const [escrows, setEscrows] = useState<EscrowItem[]>(mockEscrows);
@@ -218,27 +223,64 @@ export default function EscrowDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--lux-gold)' }}>
-              Escrow Dashboard
-            </h1>
-            <p className="text-gray-400">
-              Manage your secure transactions and escrow contracts
-            </p>
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Title */}
+            <div>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                ESCROW DASHBOARD
+              </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Manage your secure transactions and escrow contracts
+              </p>
+            </div>
+            
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Active</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>
+                  {escrows.filter(e => e.status === 'active').length}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Pending</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>
+                  {escrows.filter(e => e.status === 'pending').length}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Total Value</p>
+                <p className="text-lg font-semibold" style={{ color: '#22C55E' }}>
+                  ${escrows.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2">
+              <ContextualHelp context="escrow" />
+              <button
+                onClick={refreshEscrows}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#A1A1AA' }}
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
-          
-          <button
-            onClick={refreshEscrows}
-            disabled={isLoading}
-            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-6 py-6">
+        {/* Trust Signals */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <TrustBadge variant="escrow" />
+          <TrustBadge variant="custody" />
         </div>
 
         {/* Stats Cards */}
@@ -399,7 +441,11 @@ export default function EscrowDashboard() {
             <button className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-700 transition-all">
               Create New Escrow
             </button>
-            <button className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+            <button 
+              onClick={() => navigate('/disputes')}
+              className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+            >
+              <Shield className="w-4 h-4" />
               View Dispute Center
             </button>
             <button className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">

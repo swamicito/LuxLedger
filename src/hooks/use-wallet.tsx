@@ -3,8 +3,6 @@ import { useToast } from '@/hooks/use-toast';
 import { XummSdk } from 'xumm-sdk';
 import { xrplClient } from '@/lib/xrpl-client';
 import { autoRegister } from '@/lib/luxbroker/auto-register';
-console.log("✅ ENV KEY:", import.meta.env.VITE_XUMM_API_KEY);
-console.log("✅ ENV SECRET:", import.meta.env.VITE_XUMM_API_SECRET);
 
 // XUMM SDK Configuration
 const xummSdk = new XummSdk(

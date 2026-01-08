@@ -1,6 +1,5 @@
 import { Handler } from '@netlify/functions';
 import { assetManager } from '../../src/lib/asset-manager';
-import { supabase } from '../../src/integrations/supabase/client';
 
 export const handler: Handler = async (event, context) => {
   const headers = {

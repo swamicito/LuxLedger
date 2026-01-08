@@ -192,30 +192,45 @@ export default function BrokerLeaderboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-yellow-600/20 to-yellow-400/20 border-b border-yellow-600/30">
-        <div className="container mx-auto px-6 py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
-          >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Trophy className="w-12 h-12 text-yellow-400" />
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-                Broker Leaderboard
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Institutional Header */}
+      <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Title */}
+            <div>
+              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+                BROKER LEADERBOARD
               </h1>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                Top performing LuxBroker affiliates
+              </p>
             </div>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Top performing LuxBroker affiliates competing for luxury rewards and recognition
-            </p>
-          </motion.div>
+            
+            {/* Center: Stats */}
+            <div className="hidden md:flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Top Earners</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>{topEarners.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#6B7280' }}>Total Volume</p>
+                <p className="text-lg font-semibold" style={{ color: '#F5F5F7' }}>
+                  ${(topVolume.reduce((sum, b) => sum + b.total_sales_volume, 0) / 1000).toFixed(0)}K
+                </p>
+              </div>
+            </div>
+            
+            {/* Right: Status */}
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-sm" style={{ color: '#22C55E' }}>Live</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-6">
         {/* Tier Legend */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
