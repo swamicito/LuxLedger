@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local machine / accidental
+*.pub
+*.pem
+*.key
+.DS_Store
