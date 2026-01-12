@@ -245,7 +245,7 @@ const Navigation = () => {
               <Link to="/notifications" className="lg:hidden">
                 <Button variant="ghost" size="sm" className="tap-target relative">
                   <Bell className="h-5 w-5" aria-hidden="true" />
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full"></span>
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-400 rounded-full ring-2 ring-background"></span>
                 </Button>
               </Link>
             )}
@@ -265,7 +265,7 @@ const Navigation = () => {
               </SheetTrigger>
               <SheetContent 
                 side="right" 
-                className="w-80 bg-background border-l border-white/10"
+                className="w-full sm:w-80 bg-background border-l border-white/10"
                 aria-describedby="mobile-menu-description"
               >
                 <VisuallyHidden>
@@ -291,6 +291,13 @@ const Navigation = () => {
                       <span className="text-white">Ledger</span>
                     </span>
                   </Link>
+                  {/* Login status indicator */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${user ? 'bg-emerald-500' : 'bg-gray-500'}`}></div>
+                    <span className="text-xs text-muted-foreground">
+                      {user ? 'Signed in' : 'Guest'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto">

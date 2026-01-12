@@ -233,12 +233,13 @@ export default function MarketplacePage() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Left: Title */}
-            <div>
-              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+              <h1 className="text-lg sm:text-xl font-medium tracking-wide whitespace-nowrap" style={{ color: '#D4AF37' }}>
                 LUXURY MARKETPLACE
               </h1>
-              <p className="text-sm" style={{ color: '#6B7280' }}>
-                Authenticated luxury items · Blockchain verified
+              <span className="hidden sm:inline text-gray-600">·</span>
+              <p className="text-xs sm:text-sm whitespace-nowrap" style={{ color: '#6B7280' }}>
+                Authenticated · Blockchain verified
               </p>
             </div>
             
