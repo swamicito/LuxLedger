@@ -283,6 +283,7 @@ const Navigation = () => {
                   </Link>
                 </div>
 
+                <div className="flex-1 overflow-y-auto">
                 <nav className="flex flex-col mt-6" role="navigation" aria-label="Mobile navigation">
                   {allNavItems.map((item) => (
                     <Link
@@ -363,6 +364,7 @@ const Navigation = () => {
                       </Button>
                     </Link>
                   )}
+                </div>
                 </div>
               </SheetContent>
             </Sheet>
