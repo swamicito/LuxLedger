@@ -54,7 +54,7 @@ export function StatsSection() {
     };
 
     return (
-      <span className="text-4xl md:text-5xl font-bold text-primary font-inter">
+      <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary font-inter">
         {formatNumber(Math.floor(count))}
       </span>
     );
@@ -72,15 +72,15 @@ export function StatsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 md:gap-8">
           {stats.map((stat, index) => (
             <div 
               key={stat.label}
-              className="text-center luxury-card p-8"
+              className="text-center luxury-card p-4 sm:p-6 md:p-8"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <CountingNumber target={stat.value} prefix={stat.prefix} />
-              <p className="text-muted-foreground mt-2 font-inter font-medium">
+              <p className="text-muted-foreground mt-1 sm:mt-2 font-inter font-medium text-xs sm:text-sm md:text-base">
                 {stat.label}
               </p>
             </div>

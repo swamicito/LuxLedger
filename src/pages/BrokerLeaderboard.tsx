@@ -195,14 +195,14 @@ export default function BrokerLeaderboard() {
     <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
       {/* Institutional Header */}
       <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
             {/* Left: Title */}
-            <div>
-              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-lg md:text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
                 BROKER LEADERBOARD
               </h1>
-              <p className="text-sm" style={{ color: '#6B7280' }}>
+              <p className="text-xs sm:text-sm hidden sm:block" style={{ color: '#6B7280' }}>
                 Top performing LuxBroker affiliates
               </p>
             </div>
@@ -239,21 +239,21 @@ export default function BrokerLeaderboard() {
           className="mb-8"
         >
           <Card className="bg-gray-900 border-gray-800">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Broker Tiers</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CardContent className="p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Broker Tiers</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {BROKER_TIERS.map((tier) => (
                   <div key={tier.id} className="text-center">
                     <div 
-                      className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-2xl"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-full mx-auto mb-1.5 sm:mb-2 flex items-center justify-center text-xl sm:text-2xl"
                       style={{ backgroundColor: tier.color + '20' }}
                     >
                       {tier.icon}
                     </div>
-                    <p className="font-semibold" style={{ color: tier.color }}>
+                    <p className="font-semibold text-sm sm:text-base" style={{ color: tier.color }}>
                       {tier.name}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-[10px] sm:text-xs text-gray-400">
                       {(tier.commissionRate * 100).toFixed(1)}% commission
                     </p>
                   </div>
@@ -270,27 +270,27 @@ export default function BrokerLeaderboard() {
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           <Tabs defaultValue="earnings" className="space-y-6">
-            <TabsList className="bg-gray-900 border-gray-800 grid w-full grid-cols-3">
+            <TabsList className="bg-gray-900 border-gray-800 grid w-full grid-cols-3 h-auto">
               <TabsTrigger 
                 value="earnings" 
-                className="data-[state=active]:bg-yellow-600 flex items-center gap-2"
+                className="data-[state=active]:bg-yellow-600 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 py-2"
               >
-                <DollarSign className="w-4 h-4" />
-                Top Earners
+                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Top </span>Earners
               </TabsTrigger>
               <TabsTrigger 
                 value="referrals" 
-                className="data-[state=active]:bg-yellow-600 flex items-center gap-2"
+                className="data-[state=active]:bg-yellow-600 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 py-2"
               >
-                <Users className="w-4 h-4" />
-                Most Referrals
+                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                Referrals
               </TabsTrigger>
               <TabsTrigger 
                 value="volume" 
-                className="data-[state=active]:bg-yellow-600 flex items-center gap-2"
+                className="data-[state=active]:bg-yellow-600 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 py-2"
               >
-                <TrendingUp className="w-4 h-4" />
-                Highest Volume
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                Volume
               </TabsTrigger>
             </TabsList>
 

@@ -185,14 +185,14 @@ export default function Portfolio() {
     <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
       {/* Institutional Header */}
       <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
             {/* Left: Title */}
-            <div>
-              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-lg md:text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
                 MY PORTFOLIO
               </h1>
-              <p className="text-sm" style={{ color: '#6B7280' }}>
+              <p className="text-xs sm:text-sm hidden sm:block" style={{ color: '#6B7280' }}>
                 Manage your luxury asset investments
               </p>
             </div>
@@ -344,11 +344,11 @@ export default function Portfolio() {
 
           {/* Main Content */}
           <Tabs defaultValue="assets" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="assets">My Assets</TabsTrigger>
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="yield">Yield</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 h-auto">
+              <TabsTrigger value="assets" className="text-xs sm:text-sm px-1 sm:px-3 py-2">Assets</TabsTrigger>
+              <TabsTrigger value="transactions" className="text-xs sm:text-sm px-1 sm:px-3 py-2">History</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs sm:text-sm px-1 sm:px-3 py-2">Analytics</TabsTrigger>
+              <TabsTrigger value="yield" className="text-xs sm:text-sm px-1 sm:px-3 py-2">Yield</TabsTrigger>
             </TabsList>
 
             <TabsContent value="assets">

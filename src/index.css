@@ -265,3 +265,136 @@
     }
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE-FIRST RESPONSIVE OPTIMIZATIONS - Premium mobile experience
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Mobile header fixes */
+  .mobile-header-title {
+    @apply text-base sm:text-xl font-medium tracking-wide;
+  }
+
+  .mobile-header-subtitle {
+    @apply text-xs sm:text-sm hidden xs:block;
+  }
+
+  /* Responsive tabs - prevent text overlap */
+  .responsive-tabs {
+    @apply flex overflow-x-auto scrollbar-hide;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .responsive-tabs [role="tablist"] {
+    @apply flex-nowrap min-w-max;
+  }
+
+  .responsive-tab {
+    @apply text-xs sm:text-sm px-2 sm:px-4 py-2 whitespace-nowrap;
+  }
+
+  /* Mobile-optimized cards grid */
+  .mobile-card-grid {
+    @apply grid grid-cols-2 gap-3 sm:gap-4 md:gap-6;
+  }
+
+  /* Premium stats cards - mobile optimized */
+  .stats-card-mobile {
+    @apply p-4 sm:p-6 md:p-8;
+  }
+
+  .stats-card-mobile .stats-value {
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold;
+  }
+
+  .stats-card-mobile .stats-label {
+    @apply text-xs sm:text-sm mt-1 sm:mt-2;
+  }
+
+  /* Hide scrollbar but allow scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile-first institutional header */
+  .institutional-header {
+    @apply px-4 sm:px-6 py-3 sm:py-4;
+  }
+
+  .institutional-header h1 {
+    @apply text-base sm:text-lg md:text-xl font-medium tracking-wide;
+  }
+
+  .institutional-header p {
+    @apply text-xs sm:text-sm;
+  }
+
+  /* Marketplace grid - 2 columns on mobile */
+  .marketplace-grid {
+    @apply grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6;
+  }
+
+  .marketplace-card {
+    @apply rounded-lg sm:rounded-xl overflow-hidden;
+  }
+
+  .marketplace-card-content {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  .marketplace-card-title {
+    @apply text-sm sm:text-base md:text-lg font-semibold line-clamp-2;
+  }
+
+  .marketplace-card-price {
+    @apply text-sm sm:text-base md:text-lg font-bold;
+  }
+
+  /* Mobile menu premium styling */
+  .mobile-menu-premium {
+    @apply space-y-1;
+  }
+
+  .mobile-menu-premium .menu-item {
+    @apply flex items-center gap-3 px-4 py-3.5 rounded-xl;
+    @apply text-base font-medium text-gray-300;
+    @apply transition-all duration-200;
+    @apply hover:bg-amber-500/10 hover:text-amber-400;
+    @apply active:scale-[0.98];
+  }
+
+  .mobile-menu-premium .menu-item-active {
+    @apply bg-amber-500/15 text-amber-400;
+  }
+
+  .mobile-menu-premium .menu-divider {
+    @apply my-3 border-t border-white/10;
+  }
+
+  /* Broker tiers - mobile grid */
+  .broker-tiers-grid {
+    @apply grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4;
+  }
+
+  .broker-tier-card {
+    @apply text-center p-3 sm:p-4;
+  }
+
+  .broker-tier-icon {
+    @apply w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2;
+  }
+
+  .broker-tier-name {
+    @apply text-sm sm:text-base font-semibold;
+  }
+
+  .broker-tier-commission {
+    @apply text-xs text-gray-400;
+  }
+}

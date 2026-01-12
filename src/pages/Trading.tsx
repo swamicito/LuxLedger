@@ -290,14 +290,14 @@ export default function Trading() {
     <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
       {/* Institutional Header - Matte black, minimal, data-aware */}
       <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
             {/* Left: Title */}
-            <div>
-              <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+            <div className="min-w-0 flex-shrink">
+              <h1 className="text-sm sm:text-lg md:text-xl font-medium tracking-wide truncate" style={{ color: '#D4AF37' }}>
                 TRADING TERMINAL
               </h1>
-              <p className="text-sm" style={{ color: '#6B7280' }}>
+              <p className="text-xs sm:text-sm hidden sm:block" style={{ color: '#6B7280' }}>
                 Tokenized luxury assets · Real-time execution
               </p>
             </div>

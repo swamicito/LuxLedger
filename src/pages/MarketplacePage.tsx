@@ -369,7 +369,7 @@ export default function MarketplacePage() {
           </motion.div>
         ) : (
           <div className={viewMode === 'grid' 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
             : "space-y-4"
           }>
             {filteredListings.map((listing, index) => (
@@ -379,12 +379,12 @@ export default function MarketplacePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.1 }}
                 className={viewMode === 'grid' 
-                  ? "bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-yellow-600/50 transition-all duration-300 group"
-                  : "bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-yellow-600/50 transition-all duration-300 flex gap-6"
+                  ? "bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden border border-gray-800 hover:border-yellow-600/50 transition-all duration-300 group"
+                  : "bg-gray-900 rounded-xl p-4 sm:p-6 border border-gray-800 hover:border-yellow-600/50 transition-all duration-300 flex gap-4 sm:gap-6"
                 }
               >
                 {/* Image */}
-                <div className={viewMode === 'grid' ? "aspect-square overflow-hidden" : "w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden"}>
+                <div className={viewMode === 'grid' ? "aspect-square overflow-hidden" : "w-24 sm:w-32 h-24 sm:h-32 flex-shrink-0 rounded-lg overflow-hidden"}>
                   {listing.media_url ? (
                     <img
                       src={listing.media_url}
@@ -393,18 +393,18 @@ export default function MarketplacePage() {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
-                      <div className="text-4xl">🏺</div>
+                      <div className="text-2xl sm:text-4xl">🏺</div>
                     </div>
                   )}
                 </div>
 
                 {/* Content */}
-                <div className={viewMode === 'grid' ? "p-6" : "flex-1"}>
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors">
+                <div className={viewMode === 'grid' ? "p-3 sm:p-4 md:p-6" : "flex-1"}>
+                  <div className="flex items-start justify-between mb-1 sm:mb-2 gap-1">
+                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
                       {listing.title}
                     </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium flex-shrink-0 ${
                       listing.token_type === 'nft' ? 'bg-purple-600/20 text-purple-400' :
                       listing.token_type === 'iou' ? 'bg-blue-600/20 text-blue-400' :
                       'bg-gray-600/20 text-gray-400'
@@ -413,36 +413,38 @@ export default function MarketplacePage() {
                     </span>
                   </div>
 
-                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                  <p className="text-gray-400 text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-2 hidden sm:block">
                     {listing.description}
                   </p>
 
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <span className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">
                       {listing.category}
                     </span>
-                    <span className="text-lg font-bold text-yellow-400">
+                    <span className="text-sm sm:text-base md:text-lg font-bold text-yellow-400">
                       ${listing.price_usd.toLocaleString()}
                     </span>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5 sm:gap-2">
                     <Button
                       onClick={() => handleBuyNow(listing)}
-                      className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-medium"
+                      size="sm"
+                      className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-medium text-xs sm:text-sm h-8 sm:h-9"
                     >
-                      Buy Now
+                      Buy
                     </Button>
                     <Button
                       variant="outline"
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                      size="sm"
+                      className="border-gray-700 text-gray-300 hover:bg-gray-800 text-xs sm:text-sm h-8 sm:h-9 hidden sm:flex"
                     >
                       Details
                     </Button>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-800">
-                    <p className="text-xs text-gray-500">
+                  <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-800 hidden sm:block">
+                    <p className="text-[10px] sm:text-xs text-gray-500">
                       Seller: {listing.seller_address.slice(0, 8)}...{listing.seller_address.slice(-6)}
                     </p>
                   </div>
