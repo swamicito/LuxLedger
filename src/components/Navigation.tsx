@@ -240,6 +240,16 @@ const Navigation = () => {
               </Link>
             )}
 
+            {/* Mobile Notifications Bell */}
+            {user && (
+              <Link to="/notifications" className="lg:hidden">
+                <Button variant="ghost" size="sm" className="tap-target relative">
+                  <Bell className="h-5 w-5" aria-hidden="true" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full"></span>
+                </Button>
+              </Link>
+            )}
+
             {/* Mobile Menu */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
