@@ -1,0 +1,38 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0B0B0C"/>
+      <stop offset="100%" style="stop-color:#1a1a1c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4AF37"/>
+      <stop offset="100%" style="stop-color:#F5D76E"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Border accent -->
+  <rect x="0" y="0" width="1200" height="4" fill="url(#gold)"/>
+  <rect x="0" y="626" width="1200" height="4" fill="url(#gold)"/>
+  
+  <!-- Crown icon (simplified) -->
+  <g transform="translate(540, 180)">
+    <path d="M60 0 L80 50 L120 30 L100 80 L20 80 L0 30 L40 50 Z" fill="url(#gold)"/>
+    <rect x="15" y="80" width="90" height="20" fill="url(#gold)"/>
+  </g>
+  
+  <!-- LuxLedger text -->
+  <text x="600" y="340" font-family="Georgia, serif" font-size="72" font-weight="bold" fill="url(#gold)" text-anchor="middle">LuxLedger</text>
+  
+  <!-- Tagline -->
+  <text x="600" y="400" font-family="Arial, sans-serif" font-size="28" fill="#9CA3AF" text-anchor="middle">Tokenized Luxury Asset Marketplace</text>
+  
+  <!-- Subtext -->
+  <text x="600" y="460" font-family="Arial, sans-serif" font-size="20" fill="#6B7280" text-anchor="middle">Real Estate • Fine Art • Jewelry • Exotic Cars</text>
+  
+  <!-- XRPL badge -->
+  <rect x="500" y="500" width="200" height="40" rx="20" fill="rgba(212, 175, 55, 0.15)" stroke="#D4AF37" stroke-width="1"/>
+  <text x="600" y="527" font-family="Arial, sans-serif" font-size="16" fill="#D4AF37" text-anchor="middle">Powered by XRPL</text>
+</svg>

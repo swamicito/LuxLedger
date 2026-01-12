@@ -341,7 +341,7 @@ export default function Help() {
           {/* How Escrow Works */}
           <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-900/95">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-amber-400" />
                 <CardTitle className="text-sm font-semibold">How Escrow Works</CardTitle>
               </div>
@@ -354,11 +354,11 @@ export default function Help() {
                   { step: 3, title: "Buyer confirms receipt", desc: "Inspects and approves asset" },
                   { step: 4, title: "Escrow releases", desc: "Funds transferred to seller" },
                 ].map((item) => (
-                  <div key={item.step} className="flex items-start gap-3">
+                  <div key={item.step} className="flex items-start gap-3 pl-0">
                     <div className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-semibold text-amber-300">
                       {item.step}
                     </div>
-                    <div>
+                    <div className="text-left">
                       <p className="text-sm font-medium">{item.title}</p>
                       <p className="text-xs text-muted-foreground">{item.desc}</p>
                     </div>
@@ -384,7 +384,7 @@ export default function Help() {
           {/* Verification Standards */}
           <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-900/95">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Gem className="h-4 w-4 text-amber-400" />
                 <CardTitle className="text-sm font-semibold">Verification Standards</CardTitle>
               </div>
@@ -397,11 +397,11 @@ export default function Help() {
                   { icon: ShieldCheck, title: "Third-Party Auth", desc: "Independent verification for high-value" },
                   { icon: Scale, title: "Blockchain Record", desc: "Immutable provenance on XRPL" },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
+                  <div key={i} className="flex items-start gap-3 pl-0">
                     <div className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5">
                       <item.icon className="h-3 w-3 text-muted-foreground" />
                     </div>
-                    <div>
+                    <div className="text-left">
                       <p className="text-sm font-medium">{item.title}</p>
                       <p className="text-xs text-muted-foreground">{item.desc}</p>
                     </div>
