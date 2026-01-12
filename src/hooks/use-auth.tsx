@@ -11,7 +11,6 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
-  signInWithApple: () => Promise<{ error: any }>;
   signInWithWallet: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   userProfile: any;
@@ -183,27 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signInWithApple = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-        return { error };
-      }
-
-      return { error: null };
-    } catch (error: any) {
-      toast.error('Apple sign in failed');
-      return { error };
-    }
-  };
-
   const signInWithWallet = async () => {
     try {
       // This would integrate with XUMM wallet authentication
@@ -289,7 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signInWithGoogle,
-    signInWithApple,
     signInWithWallet,
     signOut,
     userProfile,
