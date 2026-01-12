@@ -17,12 +17,12 @@ export function Footer() {
 
   const socialLinks = [
     { Icon: Twitter, href: `https://twitter.com/${twitterHandle.replace('@', '')}`, label: twitterHandle },
-    { Icon: Mail, href: "mailto:contact@luxledger.com", label: "Contact" }
+    { Icon: Mail, href: "mailto:contact@luxledger.io", label: "Contact" }
   ];
 
   return (
     <footer style={{ backgroundColor: 'var(--charcoal)', borderTop: '1px solid var(--graphite)' }}>
-      <div className="container mx-auto px-6 py-12">
+      <div className="w-full px-3 sm:px-4 md:container md:mx-auto py-8 sm:py-12">
         
         {/* Web3 Identity Banner */}
         <div className="text-center py-6 mb-8 border-b" style={{ borderColor: 'var(--graphite)' }}>

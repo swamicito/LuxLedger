@@ -78,7 +78,7 @@ const Navigation = () => {
       role="navigation"
       aria-label="Main navigation"
     >
-      <div className="container mx-auto px-4">
+      <div className="w-full px-3 sm:px-4 md:container md:mx-auto">
         <div className="flex h-14 items-center justify-between sm:h-16">
           {/* Logo - Fixed sizing, no layout shift */}
           <Link 
