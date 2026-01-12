@@ -299,9 +299,9 @@ const Navigation = () => {
                   ))}
                 </nav>
                   
-                <div className="mobile-menu-section space-y-2">
+                <div className="mobile-menu-section space-y-3 pb-8">
                   {/* Mobile - Language and Currency Switchers */}
-                  <div className="flex items-center justify-between px-2 py-2">
+                  <div className="flex items-center justify-between px-2 py-2 bg-white/5 rounded-lg">
                     <LanguageSwitcher />
                     <CurrencySwitcher />
                   </div>
@@ -309,7 +309,7 @@ const Navigation = () => {
                     variant={account ? "outline" : "default"}
                     onClick={handleWalletAction}
                     disabled={isConnecting}
-                    className="w-full justify-start gap-3 h-12"
+                    className="w-full justify-center gap-3 h-12 bg-amber-500 hover:bg-amber-400 text-black font-medium"
                     aria-label={account ? 'Disconnect wallet' : 'Connect wallet'}
                   >
                     <Wallet className="h-4 w-4" aria-hidden="true" />

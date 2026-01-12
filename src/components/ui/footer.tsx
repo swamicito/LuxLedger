@@ -45,21 +45,21 @@ export function Footer() {
           </p>
         </div>
 
-        {/* Main Footer Content */}
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
-          
-          {/* Brand Section */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <img src="/brand/crown-mono.svg" alt="LuxLedger" className="w-8 h-8" />
-              <span className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)' }}>
-                LUXLEDGER
-              </span>
-            </div>
-            <p style={{ color: 'var(--ivory)', fontFamily: 'var(--font-ui)' }}>
-              Luxury, verified. Ownership in seconds.
-            </p>
+        {/* Centered Logo */}
+        <div className="flex flex-col items-center justify-center mb-8">
+          <div className="flex items-center space-x-3 mb-3">
+            <img src="/brand/crown-mono.svg" alt="LuxLedger" className="w-10 h-10" />
+            <span className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)' }}>
+              LUXLEDGER
+            </span>
           </div>
+          <p className="text-center" style={{ color: 'var(--ivory)', fontFamily: 'var(--font-ui)' }}>
+            Luxury, verified. Ownership in seconds.
+          </p>
+        </div>
+
+        {/* Main Footer Content */}
+        <div className="grid md:grid-cols-2 gap-8 mb-8 max-w-2xl mx-auto text-center md:text-left">
 
           {/* Links */}
           <div>

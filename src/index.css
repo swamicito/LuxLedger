@@ -145,6 +145,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Wider containers on mobile - less padding */
+  .container {
+    @apply px-3 sm:px-4 md:px-6;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

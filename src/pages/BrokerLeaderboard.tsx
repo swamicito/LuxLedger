@@ -242,7 +242,7 @@ export default function BrokerLeaderboard() {
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Broker Tiers</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                {BROKER_TIERS.map((tier) => (
+                {[...BROKER_TIERS].reverse().map((tier) => (
                   <div key={tier.id} className="text-center">
                     <div 
                       className="w-10 h-10 sm:w-12 sm:h-12 rounded-full mx-auto mb-1.5 sm:mb-2 flex items-center justify-center text-xl sm:text-2xl"
@@ -336,6 +336,7 @@ export default function BrokerLeaderboard() {
         </motion.div>
 
         {/* Competition Info */}
+        {/* Monthly Competition - Coming Soon */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -343,28 +344,14 @@ export default function BrokerLeaderboard() {
           className="mt-12"
         >
           <Card className="bg-gradient-to-r from-yellow-600/10 to-yellow-400/10 border-yellow-600/30">
-            <CardContent className="p-8 text-center">
-              <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-2">Monthly Competition</h3>
-              <p className="text-gray-300 mb-4">
-                Top 3 brokers each month win exclusive luxury rewards and bonuses
+            <CardContent className="p-6 sm:p-8 text-center">
+              <Trophy className="w-12 h-12 sm:w-16 sm:h-16 text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Monthly Competition</h3>
+              <p className="text-gray-300 mb-4 text-sm sm:text-base">
+                Compete with top brokers for exclusive recognition and higher commission tiers
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🥇</div>
-                  <p className="font-semibold text-yellow-400">1st Place</p>
-                  <p className="text-sm text-gray-400">$5,000 bonus + luxury watch</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🥈</div>
-                  <p className="font-semibold text-gray-400">2nd Place</p>
-                  <p className="text-sm text-gray-400">$2,500 bonus + jewelry</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🥉</div>
-                  <p className="font-semibold text-amber-600">3rd Place</p>
-                  <p className="text-sm text-gray-400">$1,000 bonus + accessories</p>
-                </div>
+              <div className="inline-block px-4 py-2 bg-yellow-600/20 rounded-full">
+                <span className="text-yellow-400 font-medium text-sm">Prizes Coming Soon</span>
               </div>
             </CardContent>
           </Card>
