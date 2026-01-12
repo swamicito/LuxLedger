@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Plus, Shield, CheckCircle, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, Plus, Shield, CheckCircle, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-luxury.jpg";
 
@@ -7,43 +7,44 @@ export function HeroSection() {
   const navigate = useNavigate();
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden" style={{ backgroundColor: 'var(--charcoal)' }}>
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50" />
-      
-      {/* Background Image with better treatment */}
+    <section className="relative overflow-hidden" style={{ backgroundColor: '#0B0B0C' }}>
+      {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
         style={{ backgroundImage: `url(${heroImage})` }}
       />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
 
-      {/* Content */}
-      <div className="relative z-10 full-width-mobile w-full py-16 sm:py-20">
-        <div className="max-w-4xl mx-auto text-center">
+      {/* Hero Content */}
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <div className="max-w-3xl mx-auto text-center">
           
-          {/* Trust badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ backgroundColor: 'var(--gold-subtle)', border: '1px solid var(--gold-muted)' }}>
-            <Sparkles className="w-4 h-4" style={{ color: 'var(--gold)' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--gold)' }}>Blockchain-Verified Luxury Assets</span>
+          {/* Crown Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/brand/crown-gradient.svg" 
+              alt="LuxLedger" 
+              className="w-16 h-16 sm:w-20 sm:h-20"
+            />
           </div>
 
           {/* Main headline */}
-          <h1 className="heading-1 mb-6">
-            <span style={{ color: 'var(--ivory)' }}>The marketplace for </span>
-            <span style={{ color: 'var(--gold)' }}>tokenized luxury</span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'Playfair Display, serif', color: '#F5F5F7' }}>
+            <span>The marketplace for </span>
+            <span style={{ color: '#D4AF37' }}>tokenized luxury</span>
           </h1>
           
           {/* Subheadline */}
-          <p className="body-large max-w-2xl mx-auto mb-10" style={{ color: 'var(--silver)' }}>
+          <p className="text-base sm:text-lg max-w-xl mx-auto mb-8" style={{ color: '#9CA3AF' }}>
             Buy, sell, and trade authenticated luxury assets with secure blockchain escrow. 
-            Real estate, fine art, jewelry, and exotic cars—verified and protected.
+            Real estate, fine art, jewelry, and exotic cars.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
             <Button 
               onClick={() => navigate("/marketplace")}
-              className="btn-primary text-base h-12 px-8"
+              className="h-11 px-6 text-sm font-medium bg-amber-500 hover:bg-amber-400 text-black"
             >
               Explore Marketplace
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -51,7 +52,7 @@ export function HeroSection() {
             <Button
               variant="outline"
               onClick={() => navigate("/list-asset")}
-              className="btn-secondary text-base h-12 px-8"
+              className="h-11 px-6 text-sm font-medium border-white/20 hover:bg-white/5"
             >
               <Plus className="w-4 h-4 mr-2" />
               List an Asset
@@ -59,28 +60,26 @@ export function HeroSection() {
           </div>
 
           {/* Trust strip */}
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-12 pt-8 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 pt-6 border-t border-white/10">
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" style={{ color: '#22C55E' }} />
-              <span className="text-sm" style={{ color: 'var(--silver)' }}>Escrow Protected</span>
+              <Shield className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs sm:text-sm" style={{ color: '#9CA3AF' }}>Escrow Protected</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" style={{ color: '#22C55E' }} />
-              <span className="text-sm" style={{ color: 'var(--silver)' }}>Expert Verified</span>
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs sm:text-sm" style={{ color: '#9CA3AF' }}>Expert Verified</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" style={{ color: '#22C55E' }} />
-              <span className="text-sm" style={{ color: 'var(--silver)' }}>48hr Dispute Resolution</span>
+              <Clock className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs sm:text-sm" style={{ color: '#9CA3AF' }}>48hr Disputes</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* How It Works Section */}
-      <div className="absolute bottom-0 left-0 right-0">
-        <div className="full-width-mobile pb-8">
-          <HowItWorksSection />
-        </div>
+      {/* How It Works Section - Now in normal flow */}
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
+        <HowItWorksSection />
       </div>
     </section>
   );
