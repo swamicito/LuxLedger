@@ -1,75 +1,85 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Plus, Shield, CheckCircle, Clock } from "lucide-react";
+import { ArrowRight, Plus, Shield, CheckCircle, Clock, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-luxury.jpg";
 
 export function HeroSection() {
   const navigate = useNavigate();
-  // How It Works is always visible now
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
+    <section className="relative min-h-[90vh] flex items-center overflow-hidden" style={{ backgroundColor: 'var(--charcoal)' }}>
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50" />
+      
+      {/* Background Image with better treatment */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
         style={{ backgroundImage: `url(${heroImage})` }}
-      >
-        <div className="absolute inset-0" style={{ backgroundColor: 'var(--lux-black)', opacity: 0.8 }} />
-      </div>
+      />
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-            
-            {/* Left Side - Crown Logo */}
-            <div className="flex-shrink-0">
-              <img 
-                src="/brand/crown-gradient.svg" 
-                alt="LuxLedger Crown" 
-                className="w-18 h-18 lg:w-20 lg:h-20"
-              />
+      <div className="relative z-10 full-width-mobile w-full py-16 sm:py-20">
+        <div className="max-w-4xl mx-auto text-center">
+          
+          {/* Trust badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ backgroundColor: 'var(--gold-subtle)', border: '1px solid var(--gold-muted)' }}>
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--gold)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--gold)' }}>Blockchain-Verified Luxury Assets</span>
+          </div>
+
+          {/* Main headline */}
+          <h1 className="heading-1 mb-6">
+            <span style={{ color: 'var(--ivory)' }}>The marketplace for </span>
+            <span style={{ color: 'var(--gold)' }}>tokenized luxury</span>
+          </h1>
+          
+          {/* Subheadline */}
+          <p className="body-large max-w-2xl mx-auto mb-10" style={{ color: 'var(--silver)' }}>
+            Buy, sell, and trade authenticated luxury assets with secure blockchain escrow. 
+            Real estate, fine art, jewelry, and exotic cars—verified and protected.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => navigate("/marketplace")}
+              className="btn-primary text-base h-12 px-8"
+            >
+              Explore Marketplace
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/list-asset")}
+              className="btn-secondary text-base h-12 px-8"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              List an Asset
+            </Button>
+          </div>
+
+          {/* Trust strip */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-12 pt-8 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4" style={{ color: '#22C55E' }} />
+              <span className="text-sm" style={{ color: 'var(--silver)' }}>Escrow Protected</span>
             </div>
-
-            {/* Center - Main Content */}
-            <div className="text-center lg:text-left flex-1">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', color: 'var(--ivory)' }}>
-                LUXLEDGER
-              </h1>
-              
-              <p className="text-xl md:text-2xl mb-8" style={{ fontFamily: 'var(--font-ui)', color: 'var(--ivory)' }}>
-                Luxury, verified. Ownership in seconds.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Button className="btn-gold text-lg py-3 px-6">
-                  Browse the Collection
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-                                <Button
-                  variant="outline"
-                  onClick={() => navigate("/list-asset")}
-                  className="text-lg py-3 px-6 border-2 hover:bg-white/10"
-                  style={{
-                    borderColor: 'var(--gold)',
-                    color: 'var(--gold)',
-                    backgroundColor: 'transparent'
-                  }}
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  List an Asset
-                </Button>
-              </div>
-
-                          </div>
-
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" style={{ color: '#22C55E' }} />
+              <span className="text-sm" style={{ color: 'var(--silver)' }}>Expert Verified</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" style={{ color: '#22C55E' }} />
+              <span className="text-sm" style={{ color: 'var(--silver)' }}>48hr Dispute Resolution</span>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* How It Works Section - Always visible */}
-          <div className="mt-16">
-            <HowItWorksSection />
-          </div>
+      {/* How It Works Section */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <div className="full-width-mobile pb-8">
+          <HowItWorksSection />
         </div>
       </div>
     </section>
