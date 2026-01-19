@@ -18,8 +18,8 @@ export class AutoRegisterService {
 
   constructor(config: AutoRegisterConfig = {}) {
     this.config = {
-      apiEndpoint: '/.netlify/functions/api-broker-register',
-      enableToasts: true,
+      apiEndpoint: '/api/broker-register',
+      enableToasts: false, // Disabled - API not deployed yet
       ...config
     };
   }

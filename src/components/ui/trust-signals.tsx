@@ -97,13 +97,13 @@ export function TrustBadge({ variant = "escrow", showLink = true, compact = fals
   }
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-      <Icon className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0" />
+    <div className="flex items-start gap-3 rounded-lg border p-4" style={{ borderColor: 'rgba(34, 197, 94, 0.12)', background: 'rgba(34, 197, 94, 0.03)' }}>
+      <Icon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#22C55E' }} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-emerald-300">{badge.text}</p>
-        <p className="text-xs text-emerald-300/70 mt-0.5">{badge.description}</p>
+        <p className="text-sm font-medium" style={{ color: '#86EFAC' }}>{badge.text}</p>
+        <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>{badge.description}</p>
         {showLink && (
-          <Link to={badge.link} className="text-xs text-amber-400 hover:underline mt-1 inline-block">
+          <Link to={badge.link} className="text-xs hover:underline mt-2 inline-block" style={{ color: '#D4AF37' }}>
             {badge.linkText}
           </Link>
         )}

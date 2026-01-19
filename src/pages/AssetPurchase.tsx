@@ -372,26 +372,25 @@ export default function AssetPurchase() {
                 />
 
                 {useEscrow && (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold" style={{ color: 'var(--ivory)' }}>
-                      Select Blockchain
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-medium uppercase tracking-wider" style={{ color: '#6B7280' }}>
+                      Select Network
                     </h4>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       {(['xrpl', 'ethereum', 'polygon'] as const).map((chain) => (
                         <button
                           key={chain}
                           onClick={() => setSelectedChain(chain)}
-                          className={`p-4 rounded-lg border transition-all duration-200 ${
-                            selectedChain === chain ? 'border-2' : ''
-                          }`}
+                          className="py-3 px-3 rounded-lg transition-all duration-150"
                           style={{
-                            background: selectedChain === chain ? 'rgba(212, 175, 55, 0.1)' : 'var(--lux-dark-gray)',
-                            borderColor: selectedChain === chain ? 'var(--lux-gold)' : 'rgba(212, 175, 55, 0.2)',
-                            color: 'var(--ivory)'
+                            background: selectedChain === chain ? 'rgba(212, 175, 55, 0.08)' : '#0B0B0C',
+                            border: selectedChain === chain ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(255,255,255,0.06)',
                           }}
                         >
-                          <div className="text-sm font-semibold capitalize">{chain}</div>
-                          <div className="text-xs opacity-70 mt-1">
+                          <div className="text-sm font-semibold capitalize" style={{ color: selectedChain === chain ? '#D4AF37' : '#F5F5F7' }}>
+                            {chain === 'xrpl' ? 'Xrpl' : chain.charAt(0).toUpperCase() + chain.slice(1)}
+                          </div>
+                          <div className="text-[10px] mt-0.5" style={{ color: '#6B7280' }}>
                             {chain === 'xrpl' ? 'Fast & Low Cost' : 
                              chain === 'ethereum' ? 'Most Secure' : 'Low Fees'}
                           </div>

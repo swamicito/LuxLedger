@@ -77,12 +77,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setAccount(demoAccount);
         localStorage.setItem('luxledger_wallet', JSON.stringify(demoAccount));
 
-        // Auto-register seller with LuxBroker system (demo mode)
-        try {
-          await autoRegister.registerSeller(demoAccount.address);
-        } catch (error) {
-          console.log('Auto-register failed (non-critical):', error);
-        }
+        // Auto-register seller with LuxBroker system (demo mode) - fire and forget
+        autoRegister.registerSeller(demoAccount.address).catch(() => {
+          // Silently fail - non-critical for wallet connection
+        });
 
         toast({
           title: "Demo Wallet Connected",

@@ -144,69 +144,71 @@ export function FeeBreakdown({
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80 p-5">
-      <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
-        <DollarSign className="h-4 w-4 text-amber-400" />
+    <div className="rounded-xl border border-white/[0.06] bg-[#121214] p-6">
+      {/* Header - quieter */}
+      <h4 className="text-xs font-medium uppercase tracking-wider mb-5 flex items-center gap-2" style={{ color: '#6B7280' }}>
+        <DollarSign className="h-3.5 w-3.5" style={{ color: '#9CA3AF' }} />
         Price Breakdown
       </h4>
 
       <div className="space-y-3">
-        {/* Subtotal */}
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Item price</span>
+        {/* Item Price - primary row */}
+        <div className="flex justify-between items-baseline">
+          <span className="text-sm" style={{ color: '#9CA3AF' }}>Item price</span>
           <div className="text-right">
-            <span className="font-medium">{formatUSD(subtotalUSD)}</span>
+            <span className="text-base font-semibold" style={{ color: '#F5F5F7' }}>{formatUSD(subtotalUSD)}</span>
             {showXRP && (
-              <span className="text-xs text-muted-foreground ml-2">
+              <span className="text-[11px] ml-2" style={{ color: '#6B7280' }}>
                 ≈ {formatXRP(subtotalUSD / currentXrpRate)}
               </span>
             )}
           </div>
         </div>
 
-        {/* Fee Items */}
-        {feeItems.map((fee, i) => (
-          <div key={i} className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground flex items-center">
-              {fee.label}
-              {fee.percentage && (
-                <span className="ml-1 text-xs opacity-70">({fee.percentage}%)</span>
-              )}
-              <FeeTooltip tooltip={fee.tooltip} />
-            </span>
+        {/* Fee Items - secondary, slightly indented feel */}
+        <div className="space-y-2 pl-1">
+          {feeItems.map((fee, i) => (
+            <div key={i} className="flex justify-between items-baseline" style={{ opacity: 0.85 }}>
+              <span className="text-sm flex items-center" style={{ color: '#6B7280' }}>
+                {fee.label}
+                {fee.percentage && (
+                  <span className="ml-1 text-[10px]" style={{ color: '#525252' }}>({fee.percentage}%)</span>
+                )}
+                <FeeTooltip tooltip={fee.tooltip} />
+              </span>
+              <div className="text-right tabular-nums">
+                <span className="text-sm" style={{ color: '#9CA3AF' }}>{formatUSD(fee.amountUSD)}</span>
+                {showXRP && fee.amountUSD > 0.01 && (
+                  <span className="text-[10px] ml-2" style={{ color: '#525252' }}>
+                    ≈ {formatXRP(fee.amountUSD / currentXrpRate)}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Total Section - elevated prominence */}
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(212, 175, 55, 0.15)' }}>
+          <div className="flex justify-between items-baseline">
+            <span className="text-sm font-medium" style={{ color: '#F5F5F7' }}>Total</span>
             <div className="text-right">
-              <span className="text-sm">{formatUSD(fee.amountUSD)}</span>
-              {showXRP && fee.amountUSD > 0.01 && (
-                <span className="text-xs text-muted-foreground ml-2">
-                  ≈ {formatXRP(fee.amountUSD / currentXrpRate)}
-                </span>
+              <p className="text-2xl font-bold" style={{ color: '#D4AF37' }}>{formatUSD(grandTotalUSD)}</p>
+              {showXRP && (
+                <p className="text-xs mt-1 flex items-center justify-end gap-1" style={{ color: '#6B7280' }}>
+                  <Coins className="h-3 w-3" />
+                  ≈ {formatXRP(grandTotalXRP)}
+                </p>
               )}
             </div>
           </div>
-        ))}
-
-        {/* Divider */}
-        <div className="border-t border-white/10 my-2" />
-
-        {/* Total */}
-        <div className="flex justify-between items-center">
-          <span className="font-semibold">Total</span>
-          <div className="text-right">
-            <p className="text-xl font-bold text-amber-400">{formatUSD(grandTotalUSD)}</p>
-            {showXRP && (
-              <p className="text-sm text-muted-foreground flex items-center justify-end gap-1">
-                <Coins className="h-3.5 w-3.5" />
-                ≈ {formatXRP(grandTotalXRP)}
-              </p>
-            )}
-          </div>
         </div>
 
-        {/* XRP Rate Info */}
+        {/* XRP Rate Info - very subtle */}
         {showXRP && (
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Info className="h-3 w-3" />
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+            <p className="text-[10px] flex items-center gap-1" style={{ color: '#525252' }}>
+              <Info className="h-2.5 w-2.5" />
               Rate: 1 XRP = {formatUSD(currentXrpRate)} (updates at checkout)
             </p>
           </div>
