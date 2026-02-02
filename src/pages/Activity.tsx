@@ -349,7 +349,7 @@ export default function Activity() {
                   ACTIVITY
                 </h1>
                 <p className="text-sm" style={{ color: '#6B7280' }}>
-                  Transaction history · Ledger
+                  Transaction History · Ledger
                 </p>
               </div>
             </div>
@@ -389,48 +389,48 @@ export default function Activity() {
 
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
 
-        {/* Summary Cards */}
+        {/* Summary Cards - Premium institutional style */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
-                <span className="text-xs text-muted-foreground">Total In</span>
+          <div className="rounded-xl p-5" style={{ backgroundColor: '#111113', border: '1px solid rgba(34, 197, 94, 0.15)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+                <ArrowDownLeft className="h-3.5 w-3.5" style={{ color: '#22C55E' }} />
               </div>
-              <p className="mt-1 text-lg font-semibold text-emerald-400">
-                +{formatCurrency(totalInflow, "USD")}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <ArrowUpRight className="h-4 w-4 text-red-400" />
-                <span className="text-xs text-muted-foreground">Total Out</span>
+              <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Total In</span>
+            </div>
+            <p className="text-xl font-semibold" style={{ color: '#22C55E' }}>
+              +{formatCurrency(totalInflow, "USD")}
+            </p>
+          </div>
+          <div className="rounded-xl p-5" style={{ backgroundColor: '#111113', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+                <ArrowUpRight className="h-3.5 w-3.5" style={{ color: '#EF4444' }} />
               </div>
-              <p className="mt-1 text-lg font-semibold text-red-400">
-                -{formatCurrency(totalOutflow, "USD")}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-400" />
-                <span className="text-xs text-muted-foreground">Pending</span>
+              <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Total Out</span>
+            </div>
+            <p className="text-xl font-semibold" style={{ color: '#EF4444' }}>
+              -{formatCurrency(totalOutflow, "USD")}
+            </p>
+          </div>
+          <div className="rounded-xl p-5" style={{ backgroundColor: '#111113', border: '1px solid rgba(251, 191, 36, 0.15)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)' }}>
+                <Clock className="h-3.5 w-3.5" style={{ color: '#FBBF24' }} />
               </div>
-              <p className="mt-1 text-lg font-semibold">{pendingCount}</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Total</span>
+              <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Pending</span>
+            </div>
+            <p className="text-xl font-semibold" style={{ color: '#F5F5F7' }}>{pendingCount}</p>
+          </div>
+          <div className="rounded-xl p-5" style={{ backgroundColor: '#111113', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                <Receipt className="h-3.5 w-3.5" style={{ color: '#9CA3AF' }} />
               </div>
-              <p className="mt-1 text-lg font-semibold">{transactions.length}</p>
-            </CardContent>
-          </Card>
+              <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Total</span>
+            </div>
+            <p className="text-xl font-semibold" style={{ color: '#F5F5F7' }}>{transactions.length}</p>
+          </div>
         </div>
 
         {/* Filters */}

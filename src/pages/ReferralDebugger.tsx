@@ -271,45 +271,48 @@ export default function ReferralDebugger() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5" />
-                Debug Referral Flow
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="rounded-xl p-6" style={{ backgroundColor: '#111113', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+                <Search className="w-4 h-4" style={{ color: '#3B82F6' }} />
+              </div>
+              <h3 className="text-base font-semibold" style={{ color: '#F5F5F7' }}>Debug Referral Flow</h3>
+            </div>
+            <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: '#6B7280' }}>
                     Referral Code *
                   </label>
                   <Input
                     value={referralCode}
                     onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                    placeholder="Enter 8-character referral code"
-                    className="bg-gray-800 border-gray-700"
+                    placeholder="Enter 8-character code"
+                    className="h-11"
+                    style={{ backgroundColor: '#0B0B0C', border: '1px solid rgba(255, 255, 255, 0.08)' }}
                     maxLength={8}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: '#6B7280' }}>
                     Wallet Address (Optional)
                   </label>
                   <Input
                     value={walletAddress}
                     onChange={(e) => setWalletAddress(e.target.value)}
                     placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                    className="bg-gray-800 border-gray-700"
+                    className="h-11"
+                    style={{ backgroundColor: '#0B0B0C', border: '1px solid rgba(255, 255, 255, 0.08)' }}
                   />
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   onClick={debugReferralFlow}
                   disabled={loading || !referralCode}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="h-10 px-5"
+                  style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }}
                 >
                   {loading ? 'Debugging...' : 'Debug Flow'}
                 </Button>
@@ -319,7 +322,8 @@ export default function ReferralDebugger() {
                     <Button
                       onClick={testReferralLink}
                       variant="outline"
-                      className="border-gray-600"
+                      className="h-10 px-4"
+                      style={{ borderColor: 'rgba(255, 255, 255, 0.1)', color: '#9CA3AF' }}
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Test Link
@@ -327,7 +331,8 @@ export default function ReferralDebugger() {
                     <Button
                       onClick={copyReferralLink}
                       variant="outline"
-                      className="border-gray-600"
+                      className="h-10 px-4"
+                      style={{ borderColor: 'rgba(255, 255, 255, 0.1)', color: '#9CA3AF' }}
                     >
                       <Copy className="w-4 h-4 mr-2" />
                       Copy Link
@@ -335,8 +340,8 @@ export default function ReferralDebugger() {
                   </>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
 
         {/* Debug Results */}
@@ -451,43 +456,65 @@ export default function ReferralDebugger() {
           </motion.div>
         )}
 
-        {/* Testing Tips */}
+        {/* Testing Tips - Premium institutional style */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8 }}
           className="mt-12"
         >
-          <Card className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 border-purple-600/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bug className="w-5 h-5" />
-                Testing Tips
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-white mb-2">Common Issues</h4>
-                  <ul className="text-sm text-gray-300 space-y-1">
-                    <li>• Referral code not found - Check broker registration</li>
-                    <li>• No clicks tracked - Test referral link generation</li>
-                    <li>• Seller not attributed - Check cookie handling</li>
-                    <li>• Missing commissions - Verify payment flow</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-2">Test Scenarios</h4>
-                  <ul className="text-sm text-gray-300 space-y-1">
-                    <li>• New visitor clicks referral link</li>
-                    <li>• Returning visitor with existing cookie</li>
-                    <li>• Wallet connection after referral</li>
-                    <li>• Commission payment on sale completion</li>
-                  </ul>
-                </div>
+          <div className="rounded-xl p-6" style={{ backgroundColor: '#111113', border: '1px solid rgba(212, 175, 55, 0.12)' }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(212, 175, 55, 0.08)' }}>
+                <Bug className="w-4 h-4" style={{ color: '#D4AF37' }} />
               </div>
-            </CardContent>
-          </Card>
+              <h3 className="text-base font-semibold" style={{ color: '#F5F5F7' }}>Testing Tips</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h4 className="text-xs font-medium uppercase tracking-wider mb-4" style={{ color: '#D4AF37' }}>Common Issues</h4>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}><span style={{ color: '#F5F5F7' }}>Referral code not found</span> — Check broker registration</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}><span style={{ color: '#F5F5F7' }}>No clicks tracked</span> — Test referral link generation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}><span style={{ color: '#F5F5F7' }}>Seller not attributed</span> — Check cookie handling</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}><span style={{ color: '#F5F5F7' }}>Missing commissions</span> — Verify payment flow</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-xs font-medium uppercase tracking-wider mb-4" style={{ color: '#D4AF37' }}>Test Scenarios</h4>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}>New visitor clicks referral link</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}>Returning visitor with existing cookie</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}>Wallet connection after referral</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-xs mt-0.5" style={{ color: '#6B7280' }}>•</span>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}>Commission payment on sale completion</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>

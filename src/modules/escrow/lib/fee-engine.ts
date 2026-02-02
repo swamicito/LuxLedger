@@ -43,12 +43,12 @@ export function calculateEscrowFee({
   
   if (amountUSD > 50000) {
     baseRate = 0.005; // 0.5% for >$50k
-    notes.push('Tier: High-value transaction (0.5% base rate)');
+    // High-value tier - no note needed, rate speaks for itself
   } else if (amountUSD > 10000) {
     baseRate = 0.01; // 1% for $10k-$50k
-    notes.push('Tier: Mid-value transaction (1% base rate)');
+    // Mid-value tier - no note needed
   } else {
-    notes.push('Tier: Standard transaction (1.5% base rate)');
+    // Standard tier - no note needed
   }
 
   // Apply chain multiplier
