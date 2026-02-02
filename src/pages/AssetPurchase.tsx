@@ -387,8 +387,8 @@ export default function AssetPurchase() {
                             border: selectedChain === chain ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(255,255,255,0.06)',
                           }}
                         >
-                          <div className="text-sm font-semibold capitalize" style={{ color: selectedChain === chain ? '#D4AF37' : '#F5F5F7' }}>
-                            {chain === 'xrpl' ? 'Xrpl' : chain.charAt(0).toUpperCase() + chain.slice(1)}
+                          <div className="text-sm font-semibold" style={{ color: selectedChain === chain ? '#D4AF37' : '#F5F5F7' }}>
+                            {chain === 'xrpl' ? 'XRPL' : chain.charAt(0).toUpperCase() + chain.slice(1)}
                           </div>
                           <div className="text-[10px] mt-0.5" style={{ color: '#6B7280' }}>
                             {chain === 'xrpl' ? 'Fast & Low Cost' : 

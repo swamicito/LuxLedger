@@ -10,6 +10,27 @@ import { useWallet } from '../hooks/use-wallet';
 import { brokerService, commissionService, Database } from '../lib/supabase-client';
 import { ReferralURLBuilder } from '../lib/luxbroker/referral-generator';
 import { toast } from 'sonner';
+import { Wallet } from 'lucide-react';
+
+// Connect Wallet Button Component
+const ConnectWalletButton: React.FC = () => {
+  const { connectWallet, isConnecting } = useWallet();
+  
+  return (
+    <button
+      onClick={connectWallet}
+      disabled={isConnecting}
+      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50"
+      style={{ 
+        backgroundColor: '#D4AF37', 
+        color: '#0B0B0C',
+      }}
+    >
+      <Wallet className="w-5 h-5" />
+      {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+    </button>
+  );
+};
 
 // Types
 type Broker = Database['public']['Tables']['brokers']['Row'];
@@ -163,10 +184,14 @@ export const BrokerDashboard: React.FC = () => {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">LuxBroker Dashboard</h1>
-          <p className="text-gray-400 mb-8">Connect your wallet to access your affiliate dashboard</p>
+      <div className="min-h-screen text-white flex items-center justify-center" style={{ backgroundColor: '#0B0B0C' }}>
+        <div className="text-center max-w-md px-6">
+          <img src="/brand/crown-gradient.svg" alt="LuxBroker" className="w-16 h-16 mx-auto mb-6" />
+          <h1 className="text-2xl font-semibold mb-3" style={{ color: '#D4AF37' }}>LuxBroker Dashboard</h1>
+          <p className="text-sm mb-8" style={{ color: '#9CA3AF' }}>
+            Connect your XRPL wallet to access your affiliate dashboard and start earning commissions.
+          </p>
+          <ConnectWalletButton />
         </div>
       </div>
     );
