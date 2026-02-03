@@ -128,47 +128,164 @@ export function VideoUploadStep({
     fileInputRef.current?.click();
   }, []);
 
-  // If video is not required and price is below threshold, show optional state
-  if (!required) {
+  // Show full upload UI for all listings - video helps sell!
+  // Only difference: "Required" vs "Recommended" badge
+  if (!required && !videoUrl) {
     return (
       <Card className={cn('border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80', className)}>
-        <CardContent className="p-6">
+        <CardContent className="p-6 space-y-5">
+          {/* Header */}
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-muted-foreground">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
               <Video className="h-5 w-5" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-sm font-medium">Video Verification</h3>
-                <Badge variant="outline" className="text-[0.6rem] border-white/20 text-muted-foreground">
-                  Optional
+                <h3 className="text-sm font-medium">Add a Video</h3>
+                <Badge className="text-[0.6rem] bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                  Recommended
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Video verification is optional for assets under {formatThreshold()}. 
-                Adding a video can increase buyer confidence.
+                Listings with video sell 3x faster. Show buyers your item in motion to build trust and confidence.
               </p>
-              
-              {/* Still allow optional upload */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 gap-2"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Add Video (Optional)
-              </Button>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/mp4,video/quicktime,.mp4,.mov"
-                onChange={handleInputChange}
-                className="hidden"
-              />
             </div>
           </div>
+
+          {/* Specs - condensed */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { icon: Clock, label: 'Duration', value: '15-60s' },
+              { icon: FileVideo, label: 'Format', value: 'MP4/MOV' },
+              { icon: HardDrive, label: 'Max Size', value: '250 MB' },
+              { icon: Video, label: 'Audio', value: 'Optional' },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} className="rounded-lg bg-white/5 p-2 text-center">
+                <Icon className="h-3.5 w-3.5 mx-auto mb-1 text-muted-foreground" />
+                <p className="text-[0.6rem] text-muted-foreground">{label}</p>
+                <p className="text-[0.65rem] font-medium text-white/80">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Drop Zone */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'relative rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-all',
+              isDragging
+                ? 'border-amber-400 bg-amber-500/10'
+                : 'border-white/20 hover:border-amber-400/50 hover:bg-white/5',
+              isValidating && 'pointer-events-none opacity-60'
+            )}
+          >
+            {isValidating ? (
+              <div className="space-y-3">
+                <RefreshCw className="h-6 w-6 mx-auto text-amber-400 animate-spin" />
+                <p className="text-sm text-muted-foreground">Validating video...</p>
+                <Progress value={uploadProgress} className="h-1.5 max-w-xs mx-auto" />
+              </div>
+            ) : (
+              <>
+                <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm font-medium text-white/90 mb-1">
+                  Drop your video here or click to browse
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  MP4 or MOV • 15–60 seconds • Up to 250 MB
+                </p>
+              </>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/mp4,video/quicktime,.mp4,.mov"
+              onChange={handleInputChange}
+              className="hidden"
+            />
+          </div>
+
+          {/* Validation Error */}
+          {validation && !validation.valid && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+              <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-300">Video not accepted</p>
+                <p className="text-xs text-red-200/80 mt-1">{validation.error}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show preview if video uploaded (for optional uploads)
+  if (!required && videoUrl) {
+    return (
+      <Card className={cn('border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-neutral-950', className)}>
+        <CardContent className="p-6 space-y-4">
+          {/* Header */}
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-sm font-medium text-emerald-300">Video Added</h3>
+                <Badge className="text-[0.6rem] bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                  ✓ Ready
+                </Badge>
+              </div>
+              <p className="text-xs text-emerald-200/70">
+                Great! Your video will help buyers see your item in detail.
+              </p>
+            </div>
+          </div>
+
+          {/* Video Preview */}
+          <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              controls
+              className="w-full h-full object-contain"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReplace}
+              className="gap-1.5 text-xs"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Replace
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRemove}
+              className="gap-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remove
+            </Button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/mp4,video/quicktime,.mp4,.mov"
+            onChange={handleInputChange}
+            className="hidden"
+          />
         </CardContent>
       </Card>
     );

@@ -456,15 +456,13 @@ export default function ListAsset() {
                 </div>
               </div>
 
-              {/* Video Verification Step (conditionally shown for high-value assets) */}
-              {(videoRequired || priceUSD > 0) && (
-                <VideoUploadStep
-                  priceUSD={priceUSD}
-                  videoFile={videoFile}
-                  videoUrl={videoUrl}
-                  onVideoChange={handleVideoChange}
-                />
-              )}
+              {/* Video Upload - Available for all listings */}
+              <VideoUploadStep
+                priceUSD={priceUSD}
+                videoFile={videoFile}
+                videoUrl={videoUrl}
+                onVideoChange={handleVideoChange}
+              />
 
               {/* Trust Signals */}
               <div className="space-y-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
