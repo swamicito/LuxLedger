@@ -1,14 +1,33 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { XummSdk } from 'xumm-sdk';
 import { xrplClient } from '@/lib/xrpl-client';
 import { autoRegister } from '@/lib/luxbroker/auto-register';
 
-// XUMM SDK Configuration
-const xummSdk = new XummSdk(
-  import.meta.env.VITE_XUMM_API_KEY || 'demo-api-key',
-  import.meta.env.VITE_XUMM_API_SECRET || 'demo-api-secret'
-);
+// Server-side XUMM API helpers (secret never leaves the server)
+async function createXummPayload(txjson: Record<string, unknown>) {
+  const response = await fetch('/api/xumm/create-payload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ txjson }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to create XUMM payload');
+  }
+  return response.json() as Promise<{ uuid: string; next: { always: string } }>;
+}
+
+async function getXummPayload(uuid: string) {
+  const response = await fetch(`/api/xumm/get-payload?uuid=${encodeURIComponent(uuid)}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to get XUMM payload');
+  }
+  return response.json() as Promise<{
+    meta: { resolved: boolean; signed: boolean; expired: boolean };
+    response: { account?: string; txid?: string; signer_pubkey?: string };
+  }>;
+}
 
 // Enhanced Wallet Account Interface
 interface WalletAccount {
@@ -93,19 +112,17 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           description: "Opening XUMM for authentication...",
         });
 
-        // Create XUMM sign-in request
-        const signInRequest = await xummSdk.payload.create({
-          txjson: {
-            TransactionType: 'SignIn'
-          }
+        // Create XUMM sign-in request via server-side API
+        const signInRequest = await createXummPayload({
+          TransactionType: 'SignIn'
         });
 
         if (signInRequest?.next?.always) {
           // Open XUMM app/browser
           window.open(signInRequest.next.always, '_blank');
           
-          // Wait for user to sign in
-          const signInResult = await xummSdk.payload.get(signInRequest.uuid);
+          // Poll for user to sign in
+          const signInResult = await getXummPayload(signInRequest.uuid);
           
           if (signInResult?.response?.account) {
             const walletAddress = signInResult.response.account;
@@ -207,22 +224,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       return 'demo_trustline_hash_' + Date.now();
     } else {
       // Production mode - use XUMM to sign trustline transaction
-      const trustlinePayload = await xummSdk.payload.create({
-        txjson: {
-          TransactionType: 'TrustSet',
-          Account: account.address,
-          LimitAmount: {
-            currency: currency,
-            issuer: issuer,
-            value: '1000000000'
-          }
+      const trustlinePayload = await createXummPayload({
+        TransactionType: 'TrustSet',
+        Account: account.address,
+        LimitAmount: {
+          currency: currency,
+          issuer: issuer,
+          value: '1000000000'
         }
       });
 
       if (trustlinePayload?.next?.always) {
         window.open(trustlinePayload.next.always, '_blank');
         
-        const result = await xummSdk.payload.get(trustlinePayload.uuid);
+        const result = await getXummPayload(trustlinePayload.uuid);
         
         if (result?.response?.txid) {
           toast({
@@ -269,14 +284,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       return 'demo_transaction_hash_' + Date.now();
     } else {
       // Production mode - use XUMM to sign transaction
-      const payload = await xummSdk.payload.create({
-        txjson: transaction
-      });
+      const payload = await createXummPayload(transaction);
 
       if (payload?.next?.always) {
         window.open(payload.next.always, '_blank');
         
-        const result = await xummSdk.payload.get(payload.uuid);
+        const result = await getXummPayload(payload.uuid);
         
         if (result?.response?.txid) {
           toast({

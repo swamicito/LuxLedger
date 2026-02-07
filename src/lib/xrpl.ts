@@ -79,11 +79,9 @@ export async function requestXummPayment(
   memo?: string,
   destinationAddress?: string
 ): Promise<XummPaymentResponse> {
-  const xummApiKey = import.meta.env.VITE_XUMM_API_KEY;
-  const xummApiSecret = import.meta.env.VITE_XUMM_API_SECRET;
   const platformWallet = import.meta.env.VITE_XRP_ADDRESS;
 
-  if (!xummApiKey || !xummApiSecret) {
+  if (isXummDemoMode()) {
     console.warn('XUMM API credentials not configured, using demo mode');
     return createDemoPaymentResponse(amountXrp);
   }
@@ -97,51 +95,40 @@ export async function requestXummPayment(
     // Convert XRP to drops (1 XRP = 1,000,000 drops)
     const amountDrops = Math.floor(amountXrp * 1_000_000).toString();
 
-    const payload = {
-      txjson: {
-        TransactionType: 'Payment',
-        Destination: destination,
-        Amount: amountDrops,
-        ...(memo && {
-          Memos: [{
-            Memo: {
-              MemoType: Buffer.from('luxledger', 'utf8').toString('hex').toUpperCase(),
-              MemoData: Buffer.from(memo, 'utf8').toString('hex').toUpperCase(),
-            }
-          }]
-        })
-      },
-      options: {
-        submit: true,
-        expire: 10, // 10 minutes
-        return_url: {
-          web: `${window.location.origin}/payment/callback`
-        }
-      }
+    const txjson: Record<string, unknown> = {
+      TransactionType: 'Payment',
+      Destination: destination,
+      Amount: amountDrops,
     };
 
-    const response = await fetch(`${XUMM_API_URL}/platform/payload`, {
+    if (memo) {
+      txjson.Memos = [{
+        Memo: {
+          MemoType: Buffer.from('luxledger', 'utf8').toString('hex').toUpperCase(),
+          MemoData: Buffer.from(memo, 'utf8').toString('hex').toUpperCase(),
+        }
+      }];
+    }
+
+    // Route through server-side API — secret never leaves the server
+    const response = await fetch('/api/xumm/create-payload', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': xummApiKey,
-        'X-API-Secret': xummApiSecret,
-      },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ txjson }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to create XUMM payment');
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to create XUMM payment');
     }
 
     const data = await response.json();
 
     return {
       paymentId: data.uuid,
-      qrCode: data.refs.qr_png,
-      deepLink: data.next.always,
-      websocketUrl: data.refs.websocket_status,
+      qrCode: data.refs?.qr_png || '',
+      deepLink: data.next?.always || '',
+      websocketUrl: data.refs?.websocket_status || '',
       status: 'pending',
     };
   } catch (error) {
@@ -156,20 +143,13 @@ export async function requestXummPayment(
 export async function checkXummPaymentStatus(
   paymentId: string
 ): Promise<XummPaymentResponse> {
-  const xummApiKey = import.meta.env.VITE_XUMM_API_KEY;
-  const xummApiSecret = import.meta.env.VITE_XUMM_API_SECRET;
-
-  if (!xummApiKey || !xummApiSecret) {
+  if (isXummDemoMode()) {
     return createDemoPaymentResponse(0, paymentId);
   }
 
   try {
-    const response = await fetch(`${XUMM_API_URL}/platform/payload/${paymentId}`, {
-      headers: {
-        'X-API-Key': xummApiKey,
-        'X-API-Secret': xummApiSecret,
-      },
-    });
+    // Route through server-side API — secret never leaves the server
+    const response = await fetch(`/api/xumm/get-payload?uuid=${encodeURIComponent(paymentId)}`);
 
     if (!response.ok) {
       throw new Error('Failed to check payment status');
@@ -400,5 +380,5 @@ function createDemoPaymentResponse(
  * Check if running in demo mode (no XUMM credentials)
  */
 export function isXummDemoMode(): boolean {
-  return !import.meta.env.VITE_XUMM_API_KEY || !import.meta.env.VITE_XUMM_API_SECRET;
+  return !import.meta.env.VITE_XUMM_API_KEY;
 }
