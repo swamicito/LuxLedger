@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Twitter, Shield, ExternalLink } from "lucide-react";
+import { Instagram, Twitter, Shield, ExternalLink } from "lucide-react";
 
 export function Footer() {
   const web3Alias = import.meta.env.VITE_WEB3_ALIAS || 'luxledger.crypto';
@@ -17,7 +17,7 @@ export function Footer() {
 
   const socialLinks = [
     { Icon: Twitter, href: `https://twitter.com/${twitterHandle.replace('@', '')}`, label: twitterHandle },
-    { Icon: Mail, href: "mailto:contact@luxledger.io", label: "Contact" }
+    { Icon: Instagram, href: "https://www.instagram.com/luxledgerhq/", label: "@LuxLedgerHQ" }
   ];
 
   return (

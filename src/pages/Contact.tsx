@@ -116,24 +116,45 @@ export default function Contact() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto flex max-w-4xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8">
 
-        {/* Hero Section */}
-        <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-900/95 shadow-[0_18px_45px_rgba(0,0,0,0.65)]">
-          <CardContent className="p-6 sm:p-8">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold sm:text-2xl">We'd love to hear from you</h2>
-              <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-                Have a question about our platform, need help with a transaction, or want to learn more about LuxLedger? 
-                Send us a message and we'll respond within 24 hours.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Hero — compact on mobile */}
+        <div className="text-center px-2">
+          <h2 className="text-lg font-semibold sm:text-2xl">We'd love to hear from you</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            Have a question, need help with a transaction, or want to learn more?
+            We'll respond within 24 hours.
+          </p>
+        </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Contact Info Cards */}
-          <div className="space-y-4 lg:col-span-1">
+        {/* Contact Info — horizontal row on mobile, vertical sidebar on desktop */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:hidden">
+          {[
+            { icon: Mail, title: "Email", detail: "support@luxledger.io", href: "mailto:support@luxledger.io" },
+            { icon: Clock, title: "Response", detail: "Within 24h" },
+            { icon: MapPin, title: "Based", detail: "Global" },
+          ].map(({ icon: Icon, title, detail, href }) => (
+            <Card key={title} className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
+              <CardContent className="flex flex-col items-center justify-center p-3 text-center gap-1.5">
+                <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <p className="text-[11px] font-semibold leading-tight">{title}</p>
+                {href ? (
+                  <a href={href} className="text-[10px] text-muted-foreground hover:text-amber-400 transition-colors leading-tight break-all">
+                    {detail}
+                  </a>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground leading-tight">{detail}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-3">
+          {/* Desktop-only sidebar info cards */}
+          <div className="hidden lg:flex lg:flex-col lg:gap-4 lg:col-span-1">
             <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -188,7 +209,7 @@ export default function Contact() {
 
           {/* Contact Form */}
           <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-900/95 shadow-[0_18px_45px_rgba(0,0,0,0.65)] lg:col-span-2">
-            <CardHeader className="pb-4">
+            <CardHeader className="px-4 sm:px-6 pb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-amber-400" />
                 <CardTitle className="text-base font-semibold">Send a Message</CardTitle>
@@ -198,10 +219,10 @@ export default function Contact() {
               </CardDescription>
             </CardHeader>
             {/* SLA Banner */}
-            <div className="px-6 pb-4">
+            <div className="px-4 sm:px-6 pb-3">
               <SLABanner />
             </div>
-            <CardContent className="pt-0">
+            <CardContent className="px-4 sm:px-6 pt-0">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -293,8 +314,8 @@ export default function Contact() {
 
         {/* Additional Help */}
         <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
               <div>
                 <h3 className="text-sm font-semibold">Need immediate help?</h3>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -305,7 +326,7 @@ export default function Contact() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/help")}
-                className="shrink-0"
+                className="shrink-0 w-full sm:w-auto"
               >
                 Visit Help Center
                 <ArrowRight className="ml-2 h-3 w-3" />
