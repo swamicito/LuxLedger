@@ -73,23 +73,23 @@ export default function Contact() {
     <div className="min-h-screen text-white" style={{ backgroundColor: '#0B0B0C' }}>
       {/* Institutional Header */}
       <div className="border-b" style={{ borderColor: 'rgba(212, 175, 55, 0.15)', backgroundColor: '#0E0E10' }}>
-        <div className="container mx-auto px-6 py-4">
+        <div className="w-full px-3 sm:px-4 md:container md:mx-auto py-3 sm:py-4">
           <div className="flex items-center justify-between">
             {/* Left: Back + Title */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="text-gray-400 hover:text-white hover:bg-white/5"
+                className="text-gray-400 hover:text-white hover:bg-white/5 shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-medium tracking-wide" style={{ color: '#D4AF37' }}>
                   CONTACT US
                 </h1>
-                <p className="text-sm" style={{ color: '#6B7280' }}>
+                <p className="text-xs sm:text-sm truncate" style={{ color: '#6B7280' }}>
                   Get in touch with our team
                 </p>
               </div>
@@ -116,7 +116,7 @@ export default function Contact() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-4xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8">
+      <div className="mx-auto flex max-w-4xl flex-col gap-5 px-3 py-5 sm:gap-6 sm:px-6 sm:py-8">
 
         {/* Hero — compact on mobile */}
         <div className="text-center px-2">
@@ -130,22 +130,22 @@ export default function Contact() {
         {/* Contact Info — horizontal row on mobile, vertical sidebar on desktop */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:hidden">
           {[
-            { icon: Mail, title: "Email", detail: "support@luxledger.io", href: "mailto:support@luxledger.io" },
-            { icon: Clock, title: "Response", detail: "Within 24h" },
-            { icon: MapPin, title: "Based", detail: "Global" },
-          ].map(({ icon: Icon, title, detail, href }) => (
+            { icon: Mail, title: "Email", detail: "support@luxledger.io", shortDetail: "support@luxledger.io", href: "mailto:support@luxledger.io" },
+            { icon: Clock, title: "Response", detail: "Within 24h", shortDetail: "Within 24h" },
+            { icon: MapPin, title: "Based", detail: "Global", shortDetail: "Global" },
+          ].map(({ icon: Icon, title, detail, shortDetail, href }) => (
             <Card key={title} className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-              <CardContent className="flex flex-col items-center justify-center p-3 text-center gap-1.5">
-                <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
-                  <Icon className="h-4 w-4" />
+              <CardContent className="flex flex-col items-center justify-center p-2.5 sm:p-3 text-center gap-1">
+                <div className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
-                <p className="text-[11px] font-semibold leading-tight">{title}</p>
+                <p className="text-[10px] sm:text-[11px] font-semibold leading-tight">{title}</p>
                 {href ? (
-                  <a href={href} className="text-[10px] text-muted-foreground hover:text-amber-400 transition-colors leading-tight break-all">
-                    {detail}
+                  <a href={href} className="text-[9px] sm:text-[10px] text-muted-foreground hover:text-amber-400 transition-colors leading-tight whitespace-nowrap">
+                    {shortDetail}
                   </a>
                 ) : (
-                  <p className="text-[10px] text-muted-foreground leading-tight">{detail}</p>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight whitespace-nowrap">{shortDetail}</p>
                 )}
               </CardContent>
             </Card>
@@ -156,53 +156,37 @@ export default function Contact() {
           {/* Desktop-only sidebar info cards */}
           <div className="hidden lg:flex lg:flex-col lg:gap-4 lg:col-span-1">
             <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
-                    <Mail className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Email</p>
-                    <a 
-                      href="mailto:support@luxledger.io" 
-                      className="text-xs text-muted-foreground hover:text-amber-400 transition-colors"
-                    >
-                      support@luxledger.io
-                    </a>
-                  </div>
+              <CardContent className="flex flex-col items-center text-center p-5 gap-2">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+                  <Mail className="h-5 w-5" />
                 </div>
+                <p className="text-sm font-semibold">Email</p>
+                <a 
+                  href="mailto:support@luxledger.io" 
+                  className="text-xs text-muted-foreground hover:text-amber-400 transition-colors whitespace-nowrap"
+                >
+                  support@luxledger.io
+                </a>
               </CardContent>
             </Card>
 
             <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Response Time</p>
-                    <p className="text-xs text-muted-foreground">
-                      Within 24 hours
-                    </p>
-                  </div>
+              <CardContent className="flex flex-col items-center text-center p-5 gap-2">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+                  <Clock className="h-5 w-5" />
                 </div>
+                <p className="text-sm font-semibold">Response Time</p>
+                <p className="text-xs text-muted-foreground">Within 24 hours</p>
               </CardContent>
             </Card>
 
             <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-900/80">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
-                    <MapPin className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Headquarters</p>
-                    <p className="text-xs text-muted-foreground">
-                      Global / Remote
-                    </p>
-                  </div>
+              <CardContent className="flex flex-col items-center text-center p-5 gap-2">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+                  <MapPin className="h-5 w-5" />
                 </div>
+                <p className="text-sm font-semibold">Headquarters</p>
+                <p className="text-xs text-muted-foreground">Global / Remote</p>
               </CardContent>
             </Card>
           </div>
