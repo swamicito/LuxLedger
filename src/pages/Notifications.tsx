@@ -45,7 +45,7 @@ type NotificationType =
 
 interface Notification {
   id: string;
-  type: NotificationType;
+  type: NotificationType | string;
   title: string;
   message: string;
   read: boolean;
@@ -160,7 +160,23 @@ export default function Notifications() {
         console.log("Using demo notifications");
         setNotifications(getMockNotifications());
       } else {
-        setNotifications(data || []);
+        const normalized: Notification[] = (data || []).map((row: any) => {
+          const payload = row.data || {};
+          const metadata = payload.metadata || payload;
+
+          return {
+            id: row.id,
+            type: row.type,
+            title: row.title,
+            message: row.message,
+            read: Boolean(row.read),
+            created_at: row.created_at,
+            link: payload.link,
+            metadata,
+          };
+        });
+
+        setNotifications(normalized);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -339,7 +355,10 @@ export default function Notifications() {
   const getFilteredNotifications = () => {
     if (activeTab === "all") return notifications;
     if (activeTab === "unread") return notifications.filter((n) => !n.read);
-    return notifications.filter((n) => notificationConfig[n.type]?.category === activeTab);
+    return notifications.filter(
+      (n) =>
+        notificationConfig[n.type as NotificationType]?.category === activeTab
+    );
   };
 
   const filteredNotifications = getFilteredNotifications();
@@ -513,7 +532,9 @@ export default function Notifications() {
             ) : filteredNotifications.length > 0 ? (
               <div className="divide-y divide-white/5">
                 {filteredNotifications.map((notification) => {
-                  const config = notificationConfig[notification.type];
+                  const config =
+                    notificationConfig[notification.type as NotificationType] ||
+                    notificationConfig.system;
 
                   return (
                     <div

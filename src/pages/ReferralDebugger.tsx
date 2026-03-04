@@ -126,7 +126,14 @@ export default function ReferralDebugger() {
       if (commissionsError) {
         addDebugResult('Commission Tracking', 'warning', 'Error fetching commission data');
       } else {
-        const totalEarnings = commissions.reduce((sum, c) => sum + c.amount, 0);
+        const totalEarnings = commissions.reduce((sum, c: any) => {
+          const commission =
+            c.commission_usd ??
+            c.commission_amount_usd ??
+            0;
+
+          return sum + Number(commission || 0);
+        }, 0);
         addDebugResult(
           'Commission Tracking',
           commissions.length > 0 ? 'success' : 'warning',

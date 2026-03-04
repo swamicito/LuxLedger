@@ -15,7 +15,7 @@ interface Listing {
   description: string;
   price_usd: number;
   category: string;
-  token_type: 'nft' | 'iou' | 'offchain';
+  token_type: string;
   media_url: string | null;
   seller_address: string;
   created_at: string;
@@ -152,7 +152,20 @@ export default function MarketplacePage() {
         // Table exists but empty - use demo data
         setListings(DEMO_LISTINGS);
       } else {
-        setListings(data);
+        const normalized: Listing[] = (data || []).map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description || "",
+          price_usd: Number(row.price_usd) || 0,
+          category: row.category,
+          token_type: row.token_type || "offchain",
+          media_url: row.media_url,
+          seller_address: row.seller_address,
+          created_at: row.created_at,
+          approved: Boolean(row.approved),
+        }));
+
+        setListings(normalized);
       }
     } catch (error) {
       console.error('Error fetching listings:', error);

@@ -19,12 +19,18 @@ ALTER TABLE IF EXISTS subscriptions ENABLE ROW LEVEL SECURITY;
 -- Users can view their own profile
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 CREATE POLICY "Users can view own profile" ON profiles
-  FOR SELECT USING (auth.uid() = id);
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Users can insert their own profile
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own profile
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles
-  FOR UPDATE USING (auth.uid() = id);
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- Admins can view all profiles
 DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
@@ -32,7 +38,7 @@ CREATE POLICY "Admins can view all profiles" ON profiles
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -78,7 +84,7 @@ CREATE POLICY "Admins full access to assets" ON assets
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -99,7 +105,7 @@ CREATE POLICY "Admins can view all transactions" ON transactions
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -114,13 +120,30 @@ CREATE POLICY "Users can view own escrow transactions" ON escrow_transactions
     buyer_id = auth.uid() OR seller_id = auth.uid()
   );
 
+-- Users can create escrow transactions where they are buyer or seller
+DROP POLICY IF EXISTS "Users can create own escrow transactions" ON escrow_transactions;
+CREATE POLICY "Users can create own escrow transactions" ON escrow_transactions
+  FOR INSERT WITH CHECK (
+    buyer_id = auth.uid() OR seller_id = auth.uid()
+  );
+
+-- Users can update escrow transactions where they are buyer or seller
+DROP POLICY IF EXISTS "Users can update own escrow transactions" ON escrow_transactions;
+CREATE POLICY "Users can update own escrow transactions" ON escrow_transactions
+  FOR UPDATE USING (
+    buyer_id = auth.uid() OR seller_id = auth.uid()
+  )
+  WITH CHECK (
+    buyer_id = auth.uid() OR seller_id = auth.uid()
+  );
+
 -- Admins can view all escrow transactions
 DROP POLICY IF EXISTS "Admins can view all escrow transactions" ON escrow_transactions;
 CREATE POLICY "Admins can view all escrow transactions" ON escrow_transactions
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -164,7 +187,7 @@ DROP POLICY IF EXISTS "Brokers can update own data" ON brokers;
 CREATE POLICY "Brokers can view own data" ON brokers
   FOR SELECT USING (
     wallet_address = (
-      SELECT wallet_address FROM profiles WHERE id = auth.uid()
+      SELECT wallet_address FROM profiles WHERE user_id = auth.uid()
     )
   );
 
@@ -172,7 +195,7 @@ CREATE POLICY "Brokers can view own data" ON brokers
 CREATE POLICY "Brokers can update own data" ON brokers
   FOR UPDATE USING (
     wallet_address = (
-      SELECT wallet_address FROM profiles WHERE id = auth.uid()
+      SELECT wallet_address FROM profiles WHERE user_id = auth.uid()
     )
   );
 
@@ -187,7 +210,7 @@ CREATE POLICY "Admins full access to brokers" ON brokers
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -204,7 +227,7 @@ CREATE POLICY "Brokers can view own commissions" ON commissions
     broker_id IN (
       SELECT b.id FROM brokers b
       JOIN profiles p ON b.wallet_address = p.wallet_address
-      WHERE p.id = auth.uid()
+      WHERE p.user_id = auth.uid()
     )
   );
 
@@ -214,7 +237,7 @@ CREATE POLICY "Admins can view all commissions" ON commissions
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -232,7 +255,7 @@ DROP POLICY IF EXISTS "Sellers can view own data" ON sellers;
 CREATE POLICY "Sellers can view own data" ON sellers
   FOR SELECT USING (
     wallet_address = (
-      SELECT wallet_address FROM profiles WHERE id = auth.uid()
+      SELECT wallet_address FROM profiles WHERE user_id = auth.uid()
     )
   );
 
@@ -243,7 +266,7 @@ CREATE POLICY "Brokers can view referred sellers" ON sellers
     referred_by_broker_id IN (
       SELECT b.id FROM brokers b
       JOIN profiles p ON b.wallet_address = p.wallet_address
-      WHERE p.id = auth.uid()
+      WHERE p.user_id = auth.uid()
     )
   );
 
@@ -253,7 +276,7 @@ CREATE POLICY "Admins can view all sellers" ON sellers
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
@@ -268,7 +291,7 @@ CREATE POLICY "Brokers can view own referral clicks" ON referral_clicks
     broker_id IN (
       SELECT b.id FROM brokers b
       JOIN profiles p ON b.wallet_address = p.wallet_address
-      WHERE p.id = auth.uid()
+      WHERE p.user_id = auth.uid()
     )
   );
 
@@ -283,7 +306,7 @@ CREATE POLICY "Brokers can view own notifications" ON broker_notifications
     broker_id IN (
       SELECT b.id FROM brokers b
       JOIN profiles p ON b.wallet_address = p.wallet_address
-      WHERE p.id = auth.uid()
+      WHERE p.user_id = auth.uid()
     )
   );
 
@@ -294,7 +317,7 @@ CREATE POLICY "Brokers can update own notifications" ON broker_notifications
     broker_id IN (
       SELECT b.id FROM brokers b
       JOIN profiles p ON b.wallet_address = p.wallet_address
-      WHERE p.id = auth.uid()
+      WHERE p.user_id = auth.uid()
     )
   );
 
@@ -335,6 +358,9 @@ END $$;
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON assets TO authenticated;
+GRANT INSERT, UPDATE ON profiles TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON listings TO authenticated;
+GRANT INSERT, UPDATE ON escrow_transactions TO authenticated;
 GRANT UPDATE ON notifications TO authenticated;
 GRANT DELETE ON notifications TO authenticated;
 GRANT UPDATE ON broker_notifications TO authenticated;

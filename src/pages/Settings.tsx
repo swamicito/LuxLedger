@@ -44,7 +44,7 @@ export default function Settings() {
 
   // Profile form state
   const [fullName, setFullName] = useState(userProfile?.full_name || "");
-  const [displayName, setDisplayName] = useState(userProfile?.display_name || "");
+  const [displayName, setDisplayName] = useState(userProfile?.username || "");
   const [phone, setPhone] = useState(userProfile?.phone || "");
 
   // Notification preferences
@@ -90,8 +90,9 @@ export default function Settings() {
         .from("profiles")
         .upsert({
           user_id: user.id,
+          email: user.email || userProfile?.email || `${user.id}@wallet.local`,
           full_name: fullName,
-          display_name: displayName,
+          username: displayName,
           phone,
           updated_at: new Date().toISOString(),
         });

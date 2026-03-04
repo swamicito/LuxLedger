@@ -53,6 +53,7 @@ export default function Marketplace() {
   const { user } = useAuth();
   const { trackEvent } = useAnalytics();
   const [assets, setAssets] = useState<any[]>([]);
+  const [regions, setRegions] = useState<Array<{ id: string; name: string; country: string }>>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -85,6 +86,14 @@ export default function Marketplace() {
       const config = geoService.getRegionalConfig(location.countryCode);
       setUserLocation(location);
       setRegionalConfig(config);
+
+      const { data: regionRows } = await supabase
+        .from('regions')
+        .select('id, name, country')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      setRegions(regionRows || []);
     } catch (error) {
       console.error('Failed to get regional settings:', error);
     }
@@ -111,7 +120,6 @@ export default function Marketplace() {
         .from('assets')
         .select(`
           *,
-          profiles:owner_id (full_name),
           nft_tokens (token_id, contract_address)
         `)
         .in('status', ['verified', 'tokenized', 'listed'])
@@ -122,7 +130,7 @@ export default function Marketplace() {
       }
 
       if (selectedRegion !== 'global') {
-        query = query.eq('region', selectedRegion);
+        query = query.eq('region_id', selectedRegion);
       }
 
       // Filter by price range
@@ -148,11 +156,13 @@ export default function Marketplace() {
       const { data, error } = await query;
 
       if (error) throw error;
+
+      const rows = (data || []) as any[];
       
       if (isFirstPage) {
-        setAssets(data || []);
+        setAssets(rows);
       } else {
-        setAssets(prev => [...prev, ...(data || [])]);
+        setAssets(prev => [...prev, ...rows]);
       }
     } catch (error) {
       console.error('Error fetching assets:', error);
@@ -299,11 +309,11 @@ export default function Marketplace() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="global">{t('marketplace.regions.global')}</SelectItem>
-                        <SelectItem value="north_america">{t('marketplace.regions.northAmerica')}</SelectItem>
-                        <SelectItem value="europe">{t('marketplace.regions.europe')}</SelectItem>
-                        <SelectItem value="asia">{t('marketplace.regions.asia')}</SelectItem>
-                        <SelectItem value="middle_east">{t('marketplace.regions.middleEast')}</SelectItem>
-                        <SelectItem value="latin_america">{t('marketplace.regions.latinAmerica')}</SelectItem>
+                        {regions.map((region) => (
+                          <SelectItem key={region.id} value={region.id}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -455,7 +465,7 @@ export default function Marketplace() {
                           <span>{new Date(asset.created_at).toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <span>by {asset.profiles?.full_name || 'Anonymous'}</span>
+                          <span>by Anonymous</span>
                         </div>
                       </div>
 

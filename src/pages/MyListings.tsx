@@ -41,26 +41,25 @@ import {
 import { VideoVerificationBadge } from "@/components/listing";
 import { isVideoRequired } from "@/lib/video-verification";
 
-type ListingStatus = "pending_review" | "under_review" | "approved" | "live" | "rejected" | "archived";
+type ListingStatus = string;
 
 interface Listing {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   category: string;
-  estimated_value: number;
-  images: string[];
+  estimated_value: number | null;
+  images: string[] | null;
   status: ListingStatus;
-  rejection_reason?: string;
   created_at: string;
   updated_at: string;
   views?: number;
   inquiries?: number;
-  has_video?: boolean;
-  video_url?: string;
+  has_video?: boolean | null;
+  video_url?: string | null;
 }
 
-const statusConfig: Record<ListingStatus, { label: string; color: string; icon: React.ReactNode; progress: number }> = {
+const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode; progress: number }> = {
   pending_review: {
     label: "Submitted",
     color: "border-slate-500/40 bg-slate-500/10 text-slate-300",
@@ -99,6 +98,17 @@ const statusConfig: Record<ListingStatus, { label: string; color: string; icon: 
   },
 };
 
+const getStatusConfig = (status: string) => {
+  return (
+    statusConfig[status] ?? {
+      label: status,
+      color: "border-white/10 bg-white/5 text-muted-foreground",
+      icon: <Clock className="h-3.5 w-3.5" />,
+      progress: 0,
+    }
+  );
+};
+
 const PAGE_SIZE = DEFAULT_LIMIT;
 
 export default function MyListings() {
@@ -131,14 +141,17 @@ export default function MyListings() {
       const currentCount = reset ? 0 : listings.length;
       const { data, error } = await supabase
         .from("assets")
-        .select("id, title, description, category, estimated_value, images, status, created_at, updated_at, rejection_reason, has_video, video_url")
+        .select("id, title, description, category, estimated_value, images, status, created_at, updated_at, has_video, video_url")
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false })
         .range(currentCount, currentCount + PAGE_SIZE - 1);
 
       if (error) throw error;
 
-      const newData = data || [];
+      const newData: Listing[] = (data || []).map((row) => ({
+        ...row,
+        status: row.status ?? "draft",
+      }));
       setHasMore(newData.length === PAGE_SIZE);
       
       if (reset) {
@@ -413,7 +426,7 @@ export default function MyListings() {
             ) : filteredListings.length > 0 ? (
               <div className="space-y-4">
                 {filteredListings.map((listing) => {
-                  const config = statusConfig[listing.status];
+                  const config = getStatusConfig(listing.status);
 
                   return (
                     <div
@@ -447,13 +460,13 @@ export default function MyListings() {
                             <div>
                               <h3 className="truncate text-sm font-semibold">{listing.title}</h3>
                               <p className="text-xs capitalize text-muted-foreground">
-                                {listing.category?.replace("_", " ")} • {formatCurrency(listing.estimated_value)}
+                                {listing.category?.replace("_", " ")} • {formatCurrency(listing.estimated_value ?? 0)}
                               </p>
                               {/* Video Verification Badge */}
                               <div className="mt-1">
                                 <VideoVerificationBadge
                                   hasVideo={Boolean(listing.has_video || listing.video_url)}
-                                  required={isVideoRequired(listing.estimated_value)}
+                                  required={isVideoRequired(listing.estimated_value ?? 0)}
                                   compact
                                 />
                               </div>
@@ -522,11 +535,11 @@ export default function MyListings() {
                           )}
 
                           {/* Rejection reason */}
-                          {listing.status === "rejected" && listing.rejection_reason && (
+                          {listing.status === "rejected" && (
                             <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/5 p-2.5">
                               <p className="text-[0.7rem] text-red-300">
                                 <AlertCircle className="mr-1 inline h-3 w-3" />
-                                {listing.rejection_reason}
+                                This listing requires changes before it can be approved.
                               </p>
                               <p className="mt-2 text-[0.65rem] text-muted-foreground/80">
                                 What happens next: Make the requested changes and resubmit for review.

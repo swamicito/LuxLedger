@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase-client";
+import type { Database } from "@/lib/supabase-client";
 import { toast } from "sonner";
 import { Shield, Camera, ImageIcon, ChevronLeft, Save, CheckCircle, Video } from "lucide-react";
 import { TrustBadge, VerificationStandards } from "@/components/ui/trust-signals";
@@ -29,28 +30,39 @@ type CategoryKey =
   | "wine"
   | "collectibles";
 
-type RegionKey =
-  | "global"
-  | "north_america"
-  | "europe"
-  | "asia"
-  | "middle_east"
-  | "latin_america";
-
 export default function ListAsset() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [regions, setRegions] = useState<Array<{ id: string; name: string; country: string }>>([]);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<CategoryKey | "">("");
   const [description, setDescription] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
-  const [region, setRegion] = useState<RegionKey>("global");
+  const [regionId, setRegionId] = useState<string>("global");
   const [images, setImages] = useState<string[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
+
+  useEffect(() => {
+    const loadRegions = async () => {
+      try {
+        const { data } = await supabase
+          .from("regions")
+          .select("id, name, country")
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+
+        setRegions(data || []);
+      } catch {
+        setRegions([]);
+      }
+    };
+
+    loadRegions();
+  }, []);
 
   // Parse price for video requirement check
   const priceUSD = Number(estimatedValue.replace(/,/g, "")) || 0;
@@ -93,7 +105,7 @@ export default function ListAsset() {
 
   const handleSaveDraft = () => {
     // Save to localStorage for later (video can't be saved to localStorage)
-    const draft = { title, category, description, estimatedValue, region, images };
+    const draft = { title, category, description, estimatedValue, regionId, images };
     localStorage.setItem('luxledger_listing_draft', JSON.stringify(draft));
     toast.success('Draft saved! You can finish this listing later.');
     setHasDraft(true);
@@ -175,7 +187,7 @@ export default function ListAsset() {
         toast.success("Video uploaded successfully!");
       }
 
-      const assetData: Record<string, unknown> = {
+      const assetData: Database["public"]["Tables"]["assets"]["Insert"] = {
         title,
         description,
         category,
@@ -183,7 +195,7 @@ export default function ListAsset() {
         images,
         status: "pending_review",
         owner_id: user.id,
-        region,
+        region_id: regionId === "global" ? null : regionId,
         created_at: new Date().toISOString(),
         has_video: hasValidVideo,
         video_url: uploadedVideoUrl,
@@ -201,7 +213,7 @@ export default function ListAsset() {
       setImages([]);
       setVideoFile(null);
       setVideoUrl(null);
-      setRegion("global");
+      setRegionId("global");
 
       navigate("/portfolio");
     } catch (err) {
@@ -431,19 +443,19 @@ export default function ListAsset() {
                         Region
                       </Label>
                       <Select
-                        value={region}
-                        onValueChange={(val) => setRegion(val as RegionKey)}
+                        value={regionId}
+                        onValueChange={setRegionId}
                       >
                         <SelectTrigger className="bg-black/40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="border border-white/10 bg-neutral-950">
                           <SelectItem value="global">Global</SelectItem>
-                          <SelectItem value="north_america">North America</SelectItem>
-                          <SelectItem value="europe">Europe</SelectItem>
-                          <SelectItem value="asia">Asia</SelectItem>
-                          <SelectItem value="middle_east">Middle East</SelectItem>
-                          <SelectItem value="latin_america">Latin America</SelectItem>
+                          {regions.map((region) => (
+                            <SelectItem key={region.id} value={region.id}>
+                              {region.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

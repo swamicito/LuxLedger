@@ -128,9 +128,7 @@ export default function TransactionDetail() {
         .from("transactions")
         .select(`
           *,
-          assets (id, title, category, images),
-          buyer:profiles!transactions_buyer_id_fkey (id, display_name, wallet_address),
-          seller:profiles!transactions_seller_id_fkey (id, display_name, wallet_address)
+          assets (id, title, category, images)
         `)
         .eq("id", id)
         .single();
@@ -139,21 +137,49 @@ export default function TransactionDetail() {
         console.log("Using mock transaction data");
         setTransaction(getMockTransaction(id));
       } else {
+        const buyerId = data.buyer_id as string;
+        const sellerId = data.seller_id as string;
+
+        const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("user_id, full_name, wallet_address")
+            .eq("user_id", buyerId)
+            .maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("user_id, full_name, wallet_address")
+            .eq("user_id", sellerId)
+            .maybeSingle(),
+        ]);
+
         // Transform to our interface
         setTransaction({
           id: data.id,
           type: data.buyer_id === user.id ? "purchase" : "sale",
           title: data.assets?.title || "Transaction",
-          description: data.description || "",
-          amount: data.price || data.amount || 0,
+          description: "",
+          amount: data.price || 0,
           currency: data.currency || "USD",
           status: data.status as TransactionStatus,
           created_at: data.created_at,
           completed_at: data.completed_at,
-          tx_hash: data.tx_hash,
+          tx_hash: data.transaction_hash || undefined,
           asset: data.assets,
-          buyer: data.buyer,
-          seller: data.seller,
+          buyer: buyerProfile
+            ? {
+                id: buyerProfile.user_id,
+                display_name: buyerProfile.full_name || undefined,
+                wallet_address: buyerProfile.wallet_address || undefined,
+              }
+            : { id: buyerId },
+          seller: sellerProfile
+            ? {
+                id: sellerProfile.user_id,
+                display_name: sellerProfile.full_name || undefined,
+                wallet_address: sellerProfile.wallet_address || undefined,
+              }
+            : { id: sellerId },
           fees: {
             platform_fee: (data.price || 0) * 0.025,
             escrow_fee: (data.price || 0) * 0.01,

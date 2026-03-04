@@ -75,8 +75,8 @@ export default function UserProfile() {
       // Try to fetch from profiles table
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
-        .or(`username.eq.${username},display_name.eq.${username}`)
+        .select("user_id, email, full_name, profile_image_url, created_at, wallet_address, username, is_verified")
+        .or(`username.eq.${username},full_name.eq.${username}`)
         .single();
 
       if (profileError) {
@@ -87,9 +87,9 @@ export default function UserProfile() {
         // Fetch user's public listings
         const { data: listingsData } = await supabase
           .from("assets")
-          .select("*")
+          .select("id, title, category, estimated_value, images")
           .eq("owner_id", profileData.user_id)
-          .eq("status", "live")
+          .in("status", ["listed", "live"]) 
           .order("created_at", { ascending: false })
           .limit(12);
 
@@ -105,11 +105,11 @@ export default function UserProfile() {
         setProfile({
           id: profileData.user_id,
           username: profileData.username || username,
-          display_name: profileData.display_name || profileData.full_name || username,
-          avatar_url: profileData.avatar_url,
-          bio: profileData.bio,
-          verified: profileData.kyc_verified || false,
-          broker_tier: profileData.broker_tier,
+          display_name: profileData.full_name || profileData.username || username,
+          avatar_url: profileData.profile_image_url || undefined,
+          bio: undefined,
+          verified: Boolean(profileData.is_verified),
+          broker_tier: undefined,
           member_since: profileData.created_at,
           wallet_address: profileData.wallet_address,
           stats,

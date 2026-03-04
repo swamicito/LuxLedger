@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase-client';
 import { toast } from 'sonner';
-import { useWallet } from './use-wallet';
 
 interface AuthContextType {
   user: User | null;
@@ -81,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUserProfile(data);
+      setIsWalletLinked(Boolean((data as any)?.wallet_address));
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -186,7 +186,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // This would integrate with XUMM wallet authentication
       // For now, create a demo wallet-based user
-      const walletAddress = 'rDemoWallet1234567890LuxLedger';
+      const savedWallet = localStorage.getItem('luxledger_wallet');
+      const walletAddress = savedWallet ? (JSON.parse(savedWallet) as any)?.address : null;
+      if (!walletAddress) {
+        toast.error('Connect your wallet first');
+        return { error: 'No wallet connected' };
+      }
       
       // Create or get user with wallet address as identifier
       const { data, error } = await supabase.auth.signInAnonymously();
@@ -199,12 +204,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Link wallet address to user profile
       await supabase
         .from('profiles')
-        .upsert({
-          user_id: data.user.id,
-          wallet_address: walletAddress,
-          auth_method: 'wallet',
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(
+          {
+            user_id: data.user.id,
+            email: data.user.email || `${data.user.id}@wallet.local`,
+            wallet_address: walletAddress,
+            updated_at: new Date().toISOString(),
+          } as any,
+          { onConflict: 'user_id' }
+        );
 
       toast.success('Signed in with wallet successfully!');
       return { error: null };
@@ -221,15 +229,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: 'No user' };
       }
 
-      const walletAddress = 'rDemoWallet1234567890LuxLedger';
+      const savedWallet = localStorage.getItem('luxledger_wallet');
+      const walletAddress = savedWallet ? (JSON.parse(savedWallet) as any)?.address : null;
+      if (!walletAddress) {
+        toast.error('Connect your wallet first');
+        return { error: 'No wallet connected' };
+      }
       
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user.id,
-          wallet_address: walletAddress,
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(
+          {
+            user_id: user.id,
+            email: user.email || `${user.id}@wallet.local`,
+            wallet_address: walletAddress,
+            updated_at: new Date().toISOString(),
+          } as any,
+          { onConflict: 'user_id' }
+        );
 
       if (error) {
         toast.error(error.message);
