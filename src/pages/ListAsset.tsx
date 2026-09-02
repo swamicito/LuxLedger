@@ -193,7 +193,7 @@ export default function ListAsset() {
         category,
         estimated_value: estimatedNumeric,
         images,
-        status: "pending_review",
+        status: "listed",
         owner_id: user.id,
         region_id: regionId === "global" ? null : regionId,
         created_at: new Date().toISOString(),
@@ -205,7 +205,7 @@ export default function ListAsset() {
 
       if (error) throw error;
 
-      toast.success("Asset submitted for review. Our team will verify and list it soon.");
+      toast.success("Asset listed. It is now visible in the marketplace.");
       setTitle("");
       setCategory("");
       setDescription("");

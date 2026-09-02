@@ -11,6 +11,7 @@ interface EscrowToggleProps {
   subscription?: SubscriptionTier;
   onToggle: (enabled: boolean, feeDetails?: any) => void;
   className?: string;
+  defaultEnabled?: boolean;
 }
 
 export function EscrowToggle({ 
@@ -18,9 +19,10 @@ export function EscrowToggle({
   chain = 'xrpl', 
   subscription = 'basic',
   onToggle, 
-  className = '' 
+  className = '',
+  defaultEnabled = false,
 }: EscrowToggleProps) {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(defaultEnabled);
   
   const feeDetails = calculateEscrowFee({ amountUSD, chain, subscription });
 

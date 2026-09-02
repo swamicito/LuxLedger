@@ -138,31 +138,30 @@ export default function MarketplacePage() {
 
   const fetchListings = async () => {
     try {
+      // Source of truth for listings is public.assets. Public RLS exposes
+      // status IN ('verified','tokenized','listed').
       const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('approved', true)
+        .from('assets')
+        .select('id, title, description, category, estimated_value, images, owner_id, created_at, status')
+        .in('status', ['listed', 'verified', 'tokenized'])
         .order('created_at', { ascending: false });
 
       if (error) {
-        // Table doesn't exist or other error - use demo data
+        // Query failed - use demo data
         console.warn('Using demo listings:', error.message);
         setListings(DEMO_LISTINGS);
-      } else if (!data || data.length === 0) {
-        // Table exists but empty - use demo data
-        setListings(DEMO_LISTINGS);
       } else {
-        const normalized: Listing[] = (data || []).map((row: any) => ({
+        const normalized: Listing[] = (data || []).map((row) => ({
           id: row.id,
           title: row.title,
           description: row.description || "",
-          price_usd: Number(row.price_usd) || 0,
-          category: row.category,
-          token_type: row.token_type || "offchain",
-          media_url: row.media_url,
-          seller_address: row.seller_address,
+          price_usd: Number(row.estimated_value) || 0,
+          category: String(row.category).replace(/_/g, ' '),
+          token_type: "offchain",
+          media_url: row.images?.[0] ?? null,
+          seller_address: row.owner_id,
           created_at: row.created_at,
-          approved: Boolean(row.approved),
+          approved: true,
         }));
 
         setListings(normalized);

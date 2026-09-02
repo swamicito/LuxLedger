@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { supabase } from '@/lib/supabase-client';
 import { EscrowCheckout } from '../modules/escrow/components/EscrowCheckout';
 import { EscrowToggle } from '../modules/escrow/components/EscrowToggle';
 import { multichainAdapter } from '../modules/escrow/lib/multichain-adapter';
@@ -60,9 +61,10 @@ export default function AssetPurchase() {
   
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
-  const [useEscrow, setUseEscrow] = useState(false);
+  const [useEscrow, setUseEscrow] = useState(true);
   const [selectedChain, setSelectedChain] = useState<'xrpl' | 'ethereum' | 'polygon'>('xrpl');
   const [purchaseStep, setPurchaseStep] = useState<'details' | 'checkout' | 'processing' | 'complete'>('details');
+  const [createdEscrowId, setCreatedEscrowId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -74,29 +76,49 @@ export default function AssetPurchase() {
   const fetchAsset = async (assetId: string) => {
     setLoading(true);
     try {
-      // Mock asset data - in production this would fetch from Supabase
-      const mockAsset: Asset = {
-        id: assetId,
-        title: 'Vintage Rolex Submariner',
-        description: 'Rare 1960s Rolex Submariner in excellent condition. Original box and papers included. Recently serviced by authorized Rolex dealer.',
-        category: 'watches',
-        estimated_value: 45000,
-        images: ['/placeholder.svg'],
-        status: 'listed',
-        created_at: new Date().toISOString(),
-        owner_id: 'seller_123',
-        region: 'north_america',
-        profiles: {
-          full_name: 'John Collector',
-          avatar_url: '/placeholder.svg'
-        },
-        nft_tokens: [{
-          token_id: '12345',
-          contract_address: '0x...'
-        }]
-      };
-      
-      setAsset(mockAsset);
+      const { data, error } = await supabase
+        .from('assets')
+        .select('id, title, description, category, estimated_value, images, status, created_at, owner_id')
+        .eq('id', assetId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        setAsset(null);
+        return;
+      }
+
+      const [{ data: sellerProfile }, { data: nftTokens }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('full_name, profile_image_url')
+          .eq('user_id', data.owner_id)
+          .maybeSingle(),
+        supabase
+          .from('nft_tokens')
+          .select('token_id, contract_address')
+          .eq('asset_id', data.id),
+      ]);
+
+      setAsset({
+        id: data.id,
+        title: data.title,
+        description: data.description ?? '',
+        category: String(data.category),
+        estimated_value: Number(data.estimated_value) || 0,
+        images: data.images ?? [],
+        status: data.status ?? 'listed',
+        created_at: data.created_at,
+        owner_id: data.owner_id,
+        region: 'global',
+        profiles: sellerProfile
+          ? { full_name: sellerProfile.full_name ?? 'Anonymous', avatar_url: sellerProfile.profile_image_url ?? undefined }
+          : undefined,
+        nft_tokens: (nftTokens ?? []).map((t) => ({
+          token_id: t.token_id ?? '',
+          contract_address: t.contract_address ?? '',
+        })),
+      });
     } catch (error) {
       console.error('Error fetching asset:', error);
       toast.error('Failed to load asset details');
@@ -146,11 +168,65 @@ export default function AssetPurchase() {
           );
         }
 
-        toast.success('Escrow created successfully!');
-        trackEvent('escrow_created', { 
-          escrow_id: escrowResult.escrowId,
-          asset_id: asset.id 
+        // Persist the escrow as the canonical row that drives the entire
+        // post-transaction system. The chain result is recorded as metadata;
+        // the Supabase UUID is what every workspace (buyer, seller, dashboard,
+        // dispute center, evaluate_escrow_release) operates on.
+        const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('wallet_address')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('profiles')
+            .select('wallet_address')
+            .eq('user_id', asset.owner_id)
+            .maybeSingle(),
+        ]);
+
+        const nowIso = new Date().toISOString();
+        const { data: escrowRow, error: insertError } = await supabase
+          .from('escrow_transactions')
+          .insert({
+            buyer_id: user.id,
+            seller_id: asset.owner_id,
+            asset_id: asset.id,
+            amount_usd: asset.estimated_value,
+            platform_fee_usd: Number((asset.estimated_value * 0.025).toFixed(2)),
+            buyer_address:
+              buyerProfile?.wallet_address ?? `pending:${user.id}`,
+            seller_address:
+              sellerProfile?.wallet_address ?? `pending:${asset.owner_id}`,
+            status: 'funded',
+            escrow_status: 'held',
+            funded_at: nowIso,
+            created_at: nowIso,
+          })
+          .select('id')
+          .single();
+
+        if (insertError || !escrowRow) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to persist escrow_transactions row:', insertError);
+          toast.error(
+            'On-chain escrow created, but we could not record it. Please contact support.'
+          );
+          setPurchaseStep('details');
+          return;
+        }
+
+        toast.success('Escrow created. Tracking your order…');
+        setCreatedEscrowId(escrowRow.id);
+        trackEvent('escrow_created', {
+          escrow_id: escrowRow.id,
+          chain_escrow_id: escrowResult.escrowId,
+          chain_tx_hash: escrowResult.txHash,
+          asset_id: asset.id,
         });
+        setPurchaseStep('complete');
+        navigate(`/order/${escrowRow.id}`);
+        return;
       } else {
         // Direct purchase without escrow
         toast.success('Purchase completed!');
@@ -221,21 +297,34 @@ export default function AssetPurchase() {
           </h2>
           <p className="text-lg mb-8" style={{ color: 'var(--ivory)', opacity: 0.8 }}>
             {useEscrow 
-              ? 'Your funds are safely held in escrow. You\'ll receive the asset once conditions are met.'
+              ? "Funds remain in escrow until delivery is confirmed."
               : 'Your purchase has been completed successfully.'
             }
           </p>
           <div className="space-y-4">
-            <Button 
-              onClick={() => navigate('/portfolio')}
-              className="w-full"
-              style={{
-                background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)',
-                color: 'var(--lux-black)'
-              }}
-            >
-              View Portfolio
-            </Button>
+            {useEscrow && createdEscrowId ? (
+              <Button
+                onClick={() => navigate(`/order/${createdEscrowId}`)}
+                className="w-full"
+                style={{
+                  background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)',
+                  color: 'var(--lux-black)'
+                }}
+              >
+                Track Your Order
+              </Button>
+            ) : (
+              <Button
+                onClick={() => navigate('/portfolio')}
+                className="w-full"
+                style={{
+                  background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)',
+                  color: 'var(--lux-black)'
+                }}
+              >
+                View Portfolio
+              </Button>
+            )}
             <Button 
               variant="outline" 
               onClick={() => navigate('/marketplace')}
@@ -368,6 +457,7 @@ export default function AssetPurchase() {
                   amountUSD={asset.estimated_value}
                   chain={selectedChain}
                   subscription="basic"
+                  defaultEnabled
                   onToggle={(enabled) => setUseEscrow(enabled)}
                 />
 
