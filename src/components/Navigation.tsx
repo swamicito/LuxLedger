@@ -48,6 +48,10 @@ const Navigation = () => {
     { href: '/list-asset', label: 'List an Asset' },
   ];
 
+  // Debug tooling is never shown to customers on luxledger.io.
+  const showDebugNav =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEBUG_NAV === 'true';
+
   // Secondary nav items - grouped under "More" dropdown on desktop
   const secondaryNavItems = [
     { href: '/dashboard', label: t('nav.dashboard') },
@@ -56,11 +60,8 @@ const Navigation = () => {
     { href: '/escrow/dashboard', label: 'Escrow' },
     { href: '/broker', label: 'LuxBroker' },
     { href: '/broker/leaderboard', label: 'Leaderboard' },
-    { href: '/broker/debugger', label: 'Debug' },
+    ...(showDebugNav ? [{ href: '/broker/debugger', label: 'Debug' }] : []),
   ];
-
-  // All items for mobile menu
-  const allNavItems = [...primaryNavItems, ...secondaryNavItems];
 
   const isActive = (href: string) => location.pathname === href;
   const isSecondaryActive = secondaryNavItems.some(item => isActive(item.href));
@@ -271,7 +272,7 @@ const Navigation = () => {
               </SheetTrigger>
               <SheetContent 
                 side="right" 
-                className="w-full sm:w-80 bg-background border-l border-white/10"
+                className="flex h-[100dvh] w-full flex-col gap-0 overflow-hidden border-l border-white/10 bg-background p-0 sm:w-80"
                 aria-describedby="mobile-menu-description"
               >
                 <VisuallyHidden>
@@ -281,8 +282,8 @@ const Navigation = () => {
                   </SheetDescription>
                 </VisuallyHidden>
                 
-                {/* Mobile menu header */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                {/* Mobile menu header - fixed; body below scrolls */}
+                <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-4 pt-6">
                   <Link to="/" onClick={closeMenu} className="logo-container">
                     <img 
                       src="/brand/crown-gradient.svg" 
@@ -307,9 +308,22 @@ const Navigation = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
-                <nav className="flex flex-col mt-6" role="navigation" aria-label="Mobile navigation">
-                  {allNavItems.map((item) => (
+                {/* Scrollable body - clears the Android gesture bar via safe-area inset */}
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto px-6"
+                  style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+                >
+                {/* Sign In first for guests - above the fold */}
+                {!user && (
+                  <Link to="/auth" onClick={closeMenu} className="block mt-6">
+                    <Button className="w-full justify-center h-12">
+                      {t('auth.signIn')}
+                    </Button>
+                  </Link>
+                )}
+
+                <nav className={`flex flex-col ${user ? 'mt-6' : 'mt-4'}`} role="navigation" aria-label="Mobile navigation">
+                  {primaryNavItems.map((item) => (
                     <Link
                       key={item.href}
                       to={item.href}
@@ -323,32 +337,10 @@ const Navigation = () => {
                     </Link>
                   ))}
                 </nav>
-                  
-                <div className="mobile-menu-section space-y-3 pb-8">
-                  {/* Mobile - Language and Currency Switchers */}
-                  <div className="flex items-center justify-between px-2 py-2 bg-white/5 rounded-lg">
-                    <LanguageSwitcher />
-                    <CurrencySwitcher />
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleWalletAction}
-                    disabled={isConnecting}
-                    className="w-full justify-center gap-3 h-12 font-medium"
-                    aria-label={account ? 'Disconnect wallet' : 'Connect wallet'}
-                  >
-                    <Wallet className="h-4 w-4" aria-hidden="true" />
-                    {isConnecting ? (
-                      <span>Connecting...</span>
-                    ) : account ? (
-                      <span>{account.address?.slice(0, 6)}...{account.address?.slice(-4)}</span>
-                    ) : (
-                      t('auth.connectWallet')
-                    )}
-                  </Button>
 
-                  {user ? (
-                    <div className="space-y-1 mt-2">
+                {user && (
+                  <div className="mobile-menu-section">
+                    <div className="space-y-1">
                       <Link to="/account" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <UserCircle className="h-5 w-5" aria-hidden="true" />
                         Account
@@ -381,13 +373,48 @@ const Navigation = () => {
                         {t('auth.signOut')}
                       </button>
                     </div>
-                  ) : (
-                    <Link to="/auth" onClick={closeMenu}>
-                      <Button className="w-full justify-center h-12 mt-2">
-                        {t('auth.signIn')}
-                      </Button>
+                  </div>
+                )}
+
+                {/* Secondary destinations */}
+                <nav className="mobile-menu-section flex flex-col" aria-label="More navigation">
+                  {secondaryNavItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={closeMenu}
+                      aria-current={isActive(item.href) ? 'page' : undefined}
+                      className={`mobile-menu-item ${
+                        isActive(item.href) ? 'mobile-menu-item-active' : 'text-[#F8F6F0]'
+                      }`}
+                    >
+                      {item.label}
                     </Link>
-                  )}
+                  ))}
+                </nav>
+
+                {/* Wallet (secondary) + locale/currency at the end of the scroll */}
+                <div className="mobile-menu-section space-y-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleWalletAction}
+                    disabled={isConnecting}
+                    className="w-full justify-center gap-3 h-12 font-medium"
+                    aria-label={account ? 'Disconnect wallet' : 'Connect wallet'}
+                  >
+                    <Wallet className="h-4 w-4" aria-hidden="true" />
+                    {isConnecting ? (
+                      <span>Connecting...</span>
+                    ) : account ? (
+                      <span>{account.address?.slice(0, 6)}...{account.address?.slice(-4)}</span>
+                    ) : (
+                      t('auth.connectWallet')
+                    )}
+                  </Button>
+                  <div className="flex items-center justify-between px-2 py-2 bg-white/5 rounded-lg">
+                    <LanguageSwitcher />
+                    <CurrencySwitcher />
+                  </div>
                 </div>
                 </div>
               </SheetContent>
