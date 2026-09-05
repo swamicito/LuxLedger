@@ -1,144 +1,170 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Plus, Shield, CheckCircle, Clock } from "lucide-react";
+import { Shield, BadgeCheck, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-luxury.jpg";
+
+const GOLD_PATTERN =
+  "repeating-linear-gradient(135deg, rgba(212,175,55,0.045) 0px, rgba(212,175,55,0.045) 1px, transparent 1px, transparent 28px)";
 
 export function HeroSection() {
   const navigate = useNavigate();
 
+  const trust = [
+    { icon: Shield, label: "Escrow held until delivery" },
+    { icon: BadgeCheck, label: "Independent verification" },
+    { icon: Clock, label: "Clear dispute window" },
+  ];
+
   return (
-    <section className="relative overflow-hidden" style={{ backgroundColor: '#0B0B0C' }}>
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-        style={{ backgroundImage: `url(${heroImage})` }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+    <>
+      {/* Hero - background spans the full viewport; content is constrained */}
+      <section className="relative w-full overflow-hidden" style={{ backgroundColor: "var(--lux-black)" }}>
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.18]"
+          style={{ backgroundImage: `url(${heroImage})` }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0" style={{ backgroundImage: GOLD_PATTERN }} aria-hidden="true" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 55% at 50% 0%, rgba(212,175,55,0.10) 0%, rgba(10,10,10,0) 60%), linear-gradient(180deg, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.85) 100%)",
+          }}
+          aria-hidden="true"
+        />
 
-      {/* Hero Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <div className="max-w-3xl mx-auto text-center">
-          
-          {/* Crown Logo */}
-          <div className="flex justify-center mb-6">
-            <img 
-              src="/brand/crown-gradient.svg" 
-              alt="LuxLedger" 
-              className="w-16 h-16 sm:w-20 sm:h-20"
-            />
-          </div>
-
-          {/* Main headline */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'Playfair Display, serif', color: '#F5F5F7' }}>
-            <span>The marketplace for </span>
-            <span style={{ color: '#D4AF37' }}>tokenized luxury</span>
-          </h1>
-          
-          {/* Subheadline */}
-          <p className="text-base sm:text-lg max-w-xl mx-auto mb-8" style={{ color: '#9CA3AF' }}>
-            Buy, sell, and trade authenticated luxury assets with secure blockchain escrow. 
-            Real estate, fine art, jewelry, and exotic cars.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
-            <Button 
-              onClick={() => navigate("/marketplace")}
-              className="h-11 px-6 text-sm font-medium bg-amber-500 hover:bg-amber-400 text-black"
-            >
-              Explore Marketplace
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/list-asset")}
-              className="h-11 px-6 text-sm font-medium border-white/20 hover:bg-white/5"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              List an Asset
-            </Button>
-          </div>
-
-          {/* Trust strip */}
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 pt-6 border-t border-white/10">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs sm:text-sm" style={{ color: '#9CA3AF' }}>Escrow Protected</span>
+        <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 pb-24 pt-24 sm:pb-32 sm:pt-32 lg:px-8 lg:pb-40 lg:pt-40">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-10 flex justify-center">
+              <img src="/brand/crown-gradient.svg" alt="LuxLedger" className="h-14 w-14 sm:h-16 sm:w-16" />
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs sm:text-sm" style={{ color: '#9CA3AF' }}>Expert Verified</span>
+
+            <h1
+              className="mb-8 text-5xl leading-[1.02] tracking-[-0.01em] sm:text-6xl lg:text-7xl"
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--ivory)" }}
+            >
+              Luxury, verified.
+              <br />
+              Ownership in seconds.
+            </h1>
+
+            <p
+              className="mx-auto mb-12 max-w-2xl text-base leading-relaxed sm:text-lg"
+              style={{ color: "var(--ivory)", opacity: 0.82 }}
+            >
+              Authenticated real estate, jewelry, watches, and collector cars.
+              <br className="hidden sm:block" />
+              {" "}Funds stay in escrow until delivery is confirmed.
+            </p>
+
+            <div className="mb-16 flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
+              <Button
+                onClick={() => navigate("/marketplace")}
+                className="h-12 px-8 text-sm font-medium tracking-wide"
+              >
+                Browse the Collection
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/list-asset")}
+                className="h-12 px-8 text-sm font-medium tracking-wide"
+              >
+                Apply to List
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs sm:text-sm" style={{ color: '#9CA3AF' }}>48hr Disputes</span>
+
+            {/* Trust row - ivory / muted gold only */}
+            <div
+              className="flex flex-col items-center justify-center gap-4 pt-8 sm:flex-row sm:gap-10"
+              style={{ borderTop: "1px solid rgba(212,175,55,0.18)" }}
+            >
+              {trust.map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2.5">
+                  <Icon className="h-4 w-4" style={{ color: "var(--gold)", opacity: 0.8 }} aria-hidden="true" />
+                  <span className="text-sm" style={{ color: "var(--ivory)" }}>
+                    {label}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* How It Works Section - Now in normal flow */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
-        <HowItWorksSection />
-      </div>
-    </section>
+      <HowOwnershipMoves />
+    </>
   );
 }
 
 /**
- * How It Works - Plain English explanation
+ * How ownership moves - full-bleed charcoal band with hairline gold rules.
  */
-function HowItWorksSection() {
-  const steps = [
+function HowOwnershipMoves() {
+  const columns = [
     {
-      icon: CheckCircle,
-      title: "1. Browse & Verify",
-      description: "Every luxury item is authenticated by independent experts before listing. No fakes, no guesswork.",
+      title: "Verified before it is listed",
+      body: "Every asset is authenticated before it goes live. The object is real. The record should be too.",
     },
     {
-      icon: Shield,
-      title: "2. Escrow Protection",
-      description: "When you buy, your funds are held in blockchain escrow—not by us. Money only releases when you confirm delivery.",
+      title: "Funds held in escrow",
+      body: "You do not wire into a void. Payment is held until delivery is confirmed. No release while a dispute is open.",
     },
     {
-      icon: Clock,
-      title: "3. Secure Transfer",
-      description: "Ownership transfers instantly on the blockchain. If anything goes wrong, our dispute team resolves it within 48-72 hours.",
+      title: "Proof that travels with the asset",
+      body: "You get a verifiable ownership record plus the documents the real world still requires. Title, bill of sale, registration — handled, not hand-waved.",
     },
   ];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-8">
-      <h3 className="text-2xl font-bold text-center mb-2" style={{ color: 'var(--ivory)' }}>
-        How LuxLedger Protects You
-      </h3>
-      <p className="text-center text-sm mb-8" style={{ color: 'var(--ivory)', opacity: 0.7 }}>
-        Your funds are held in blockchain escrow, not by us. Here's how it works:
-      </p>
-      
-      <div className="grid md:grid-cols-3 gap-8">
-        {steps.map((step, i) => (
-          <div key={i} className="text-center">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 mb-4">
-              <step.icon className="h-6 w-6 text-amber-400" />
-            </div>
-            <h4 className="text-lg font-semibold mb-2" style={{ color: 'var(--ivory)' }}>
-              {step.title}
-            </h4>
-            <p className="text-sm" style={{ color: 'var(--ivory)', opacity: 0.8 }}>
-              {step.description}
-            </p>
-          </div>
-        ))}
-      </div>
+    <section
+      className="w-full"
+      style={{
+        backgroundColor: "var(--charcoal)",
+        borderTop: "1px solid rgba(212,175,55,0.22)",
+        borderBottom: "1px solid rgba(212,175,55,0.22)",
+      }}
+    >
+      <div className="mx-auto w-full max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
+        <h2
+          className="mb-16 text-center text-4xl sm:text-5xl lg:mb-20"
+          style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--ivory)" }}
+        >
+          How ownership moves
+        </h2>
 
-      {/* Trust statement */}
-      <div className="mt-8 pt-6 border-t border-white/10 text-center">
-        <p className="text-xs" style={{ color: 'var(--ivory)', opacity: 0.6 }}>
-          <Shield className="inline h-3 w-3 mr-1" />
-          Funds are held in blockchain escrow, not by LuxLedger. Verified by independent authentication.
+        <div className="grid gap-12 md:grid-cols-3 md:gap-10 lg:gap-16">
+          {columns.map((col, i) => (
+            <div key={col.title}>
+              <div className="mb-6 flex items-center gap-4">
+                <span
+                  className="text-xs font-medium tracking-[0.2em]"
+                  style={{ color: "var(--gold)" }}
+                >
+                  0{i + 1}
+                </span>
+                <span className="h-px flex-1" style={{ backgroundColor: "rgba(212,175,55,0.25)" }} aria-hidden="true" />
+              </div>
+              <h3
+                className="mb-4 text-2xl leading-snug"
+                style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--ivory)" }}
+              >
+                {col.title}
+              </h3>
+              <p className="text-base leading-relaxed" style={{ color: "var(--ivory)", opacity: 0.78 }}>
+                {col.body}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <p
+          className="mx-auto mt-20 max-w-2xl text-center text-sm leading-relaxed"
+          style={{ color: "var(--ivory)", opacity: 0.62 }}
+        >
+          LuxLedger does not take possession of the asset. We orchestrate verification, escrow, and proof.
         </p>
       </div>
-    </div>
+    </section>
   );
 }

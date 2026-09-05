@@ -19,7 +19,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'playfair': ['Playfair Display', 'serif'],
+				'display': ['Cormorant Garamond', 'Georgia', 'serif'],
+				'playfair': ['Cormorant Garamond', 'Georgia', 'serif'],
 				'inter': ['Inter', 'sans-serif'],
 			},
 			backgroundImage: {

@@ -78,7 +78,7 @@ export function TrustBadge({ variant = "escrow", showLink = true, compact = fals
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+            <div className="inline-flex items-center gap-1.5 text-xs" style={{ color: 'var(--ivory)' }}>
               <Icon className="h-3.5 w-3.5" />
               <span>{badge.text}</span>
             </div>
@@ -97,11 +97,11 @@ export function TrustBadge({ variant = "escrow", showLink = true, compact = fals
   }
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border p-4" style={{ borderColor: 'rgba(34, 197, 94, 0.12)', background: 'rgba(34, 197, 94, 0.03)' }}>
-      <Icon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#22C55E' }} />
+    <div className="flex items-start gap-3 rounded-lg border p-4" style={{ borderColor: 'rgba(212, 175, 55, 0.18)', background: 'rgba(212, 175, 55, 0.04)' }}>
+      <Icon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#D4AF37', opacity: 0.85 }} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium" style={{ color: '#86EFAC' }}>{badge.text}</p>
-        <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>{badge.description}</p>
+        <p className="text-sm font-medium" style={{ color: '#F8F6F0' }}>{badge.text}</p>
+        <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(248, 246, 240, 0.7)' }}>{badge.description}</p>
         {showLink && (
           <Link to={badge.link} className="text-xs hover:underline mt-2 inline-block" style={{ color: '#D4AF37' }}>
             {badge.linkText}
@@ -139,7 +139,7 @@ export function VerificationStandards() {
           <ul className="space-y-2">
             {standards.map((standard, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <CheckCircle className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#D4AF37', opacity: 0.85 }} />
                 <span>{standard}</span>
               </li>
             ))}

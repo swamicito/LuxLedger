@@ -45,13 +45,14 @@ const Navigation = () => {
   // Primary nav items - always visible
   const primaryNavItems = [
     { href: '/marketplace', label: t('nav.marketplace') },
-    { href: '/dashboard', label: t('nav.dashboard') },
-    { href: '/portfolio', label: t('nav.portfolio') },
-    { href: '/trading', label: t('nav.trading') },
+    { href: '/list-asset', label: 'List an Asset' },
   ];
 
   // Secondary nav items - grouped under "More" dropdown on desktop
   const secondaryNavItems = [
+    { href: '/dashboard', label: t('nav.dashboard') },
+    { href: '/portfolio', label: t('nav.portfolio') },
+    { href: '/trading', label: t('nav.trading') },
     { href: '/escrow/dashboard', label: 'Escrow' },
     { href: '/broker', label: 'LuxBroker' },
     { href: '/broker/leaderboard', label: 'Leaderboard' },
@@ -74,16 +75,17 @@ const Navigation = () => {
 
   return (
     <nav 
-      className={`sticky top-0 z-50 border-b border-white/10 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 transition-shadow duration-200 ${isScrolled ? 'shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : ''}`}
+      className={`sticky top-0 z-50 w-full border-b transition-shadow duration-200 ${isScrolled ? 'shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : ''}`}
+      style={{ backgroundColor: 'rgba(10, 10, 10, 0.92)', backdropFilter: 'blur(16px)', borderColor: 'rgba(212, 175, 55, 0.14)' }}
       role="navigation"
       aria-label="Main navigation"
     >
-      <div className="w-full px-3 sm:px-4 md:container md:mx-auto">
-        <div className="flex h-14 items-center justify-between sm:h-16">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center justify-between gap-2 sm:h-16">
           {/* Logo - Fixed sizing, no layout shift */}
           <Link 
             to="/" 
-            className="logo-container group rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="logo-container group min-w-0 shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="LuxLedger - Go to homepage"
           >
             <img 
@@ -95,10 +97,12 @@ const Navigation = () => {
               height="32"
             />
             <span className="logo-text" aria-hidden="true">
-              <span className="text-amber-400">Lux</span>
-              <span className="text-white">Ledger</span>
+              <span style={{ color: 'var(--gold)' }}>Lux</span>
+              <span style={{ color: 'var(--ivory)' }}>Ledger</span>
             </span>
-            <BetaBadge variant="header" />
+            <span className="hidden sm:inline-flex">
+              <BetaBadge variant="header" />
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -132,7 +136,8 @@ const Navigation = () => {
                   <DropdownMenuItem key={item.href} asChild>
                     <Link
                       to={item.href}
-                      className={`w-full ${isActive(item.href) ? 'text-amber-400' : ''}`}
+                      className="w-full"
+                      style={{ color: isActive(item.href) ? 'var(--gold)' : 'var(--ivory)' }}
                     >
                       {item.label}
                     </Link>
@@ -143,21 +148,22 @@ const Navigation = () => {
           </div>
 
           {/* Right Side Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {/* Desktop only - Language and Currency */}
             <div className="hidden xl:flex items-center gap-2">
               <LanguageSwitcher />
               <CurrencySwitcher />
             </div>
             
-            {/* Wallet Connection */}
+            {/* Wallet Connection - secondary, quiet; lives in the drawer below lg */}
             <Button
-              variant={account ? "outline" : "default"}
+              variant="ghost"
               size="sm"
               onClick={handleWalletAction}
               disabled={isConnecting}
               aria-label={account ? `Wallet connected: ${account.address?.slice(0, 6)}` : 'Connect wallet'}
-              className="nav-button hidden sm:flex items-center gap-2 text-xs"
+              className="nav-button hidden lg:flex items-center gap-2 text-xs"
+              style={{ color: 'var(--ivory)', opacity: 0.85 }}
             >
               <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
               {isConnecting ? (
@@ -176,11 +182,11 @@ const Navigation = () => {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="nav-button hidden sm:flex items-center gap-2 hover:bg-amber-500/20 hover:text-amber-300"
+                    className="nav-button hidden sm:flex items-center gap-2 hover:bg-[#D4AF37]/15"
                     aria-label="User menu"
                   >
                     <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-amber-500/20 text-amber-300 text-xs">
+                      <AvatarFallback className="bg-[#D4AF37]/20 text-xs" style={{ color: 'var(--gold)' }}>
                         {user.email?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -233,8 +239,8 @@ const Navigation = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link to="/auth">
-                <Button variant="ghost" size="sm">
+              <Link to="/auth" className="shrink-0">
+                <Button size="sm" className="nav-button h-9 whitespace-nowrap px-3 text-xs sm:px-4 sm:text-sm">
                   {t('auth.signIn')}
                 </Button>
               </Link>
@@ -245,7 +251,7 @@ const Navigation = () => {
               <Link to="/notifications" className="lg:hidden">
                 <Button variant="ghost" size="sm" className="tap-target relative">
                   <Bell className="h-5 w-5" aria-hidden="true" />
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-400 rounded-full ring-2 ring-background"></span>
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full ring-2 ring-background" style={{ backgroundColor: 'var(--gold)' }}></span>
                 </Button>
               </Link>
             )}
@@ -287,14 +293,15 @@ const Navigation = () => {
                       height="28"
                     />
                     <span className="logo-text">
-                      <span className="text-amber-400">Lux</span>
-                      <span className="text-white">Ledger</span>
+                      <span style={{ color: 'var(--gold)' }}>Lux</span>
+                      <span style={{ color: 'var(--ivory)' }}>Ledger</span>
                     </span>
+                    <BetaBadge variant="header" showTooltip={false} />
                   </Link>
                   {/* Login status indicator */}
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${user ? 'bg-emerald-500' : 'bg-gray-500'}`}></div>
-                    <span className="text-xs text-muted-foreground">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: user ? 'var(--gold)' : 'rgba(248,246,240,0.35)' }}></div>
+                    <span className="text-xs" style={{ color: 'var(--ivory)', opacity: 0.7 }}>
                       {user ? 'Signed in' : 'Guest'}
                     </span>
                   </div>
@@ -309,7 +316,7 @@ const Navigation = () => {
                       onClick={closeMenu}
                       aria-current={isActive(item.href) ? 'page' : undefined}
                       className={`mobile-menu-item ${
-                        isActive(item.href) ? 'mobile-menu-item-active' : 'text-muted-foreground hover:text-white'
+                        isActive(item.href) ? 'mobile-menu-item-active' : 'text-[#F8F6F0]'
                       }`}
                     >
                       {item.label}
@@ -324,10 +331,10 @@ const Navigation = () => {
                     <CurrencySwitcher />
                   </div>
                   <Button
-                    variant={account ? "outline" : "default"}
+                    variant="outline"
                     onClick={handleWalletAction}
                     disabled={isConnecting}
-                    className="w-full justify-center gap-3 h-12 bg-amber-500 hover:bg-amber-400 text-black font-medium"
+                    className="w-full justify-center gap-3 h-12 font-medium"
                     aria-label={account ? 'Disconnect wallet' : 'Connect wallet'}
                   >
                     <Wallet className="h-4 w-4" aria-hidden="true" />
@@ -342,27 +349,27 @@ const Navigation = () => {
 
                   {user ? (
                     <div className="space-y-1 mt-2">
-                      <Link to="/account" onClick={closeMenu} className="mobile-menu-item text-muted-foreground hover:text-white">
+                      <Link to="/account" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <UserCircle className="h-5 w-5" aria-hidden="true" />
                         Account
                       </Link>
-                      <Link to="/notifications" onClick={closeMenu} className="mobile-menu-item text-muted-foreground hover:text-white">
+                      <Link to="/notifications" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <Bell className="h-5 w-5" aria-hidden="true" />
                         Notifications
                       </Link>
-                      <Link to="/activity" onClick={closeMenu} className="mobile-menu-item text-muted-foreground hover:text-white">
+                      <Link to="/activity" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <Activity className="h-5 w-5" aria-hidden="true" />
                         Activity
                       </Link>
-                      <Link to="/my-listings" onClick={closeMenu} className="mobile-menu-item text-muted-foreground hover:text-white">
+                      <Link to="/my-listings" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <Package className="h-5 w-5" aria-hidden="true" />
                         My Listings
                       </Link>
-                      <Link to="/settings" onClick={closeMenu} className="mobile-menu-item text-muted-foreground hover:text-white">
+                      <Link to="/settings" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <Settings className="h-5 w-5" aria-hidden="true" />
                         Settings
                       </Link>
-                      <Link to="/help" onClick={closeMenu} className="mobile-menu-item text-muted-foreground hover:text-white">
+                      <Link to="/help" onClick={closeMenu} className="mobile-menu-item text-[#F8F6F0]">
                         <HelpCircle className="h-5 w-5" aria-hidden="true" />
                         Help Center
                       </Link>
@@ -376,7 +383,7 @@ const Navigation = () => {
                     </div>
                   ) : (
                     <Link to="/auth" onClick={closeMenu}>
-                      <Button variant="outline" className="w-full justify-center h-12 mt-2">
+                      <Button className="w-full justify-center h-12 mt-2">
                         {t('auth.signIn')}
                       </Button>
                     </Link>

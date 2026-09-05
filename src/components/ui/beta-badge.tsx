@@ -30,14 +30,13 @@ export function BetaBadge({ variant = "header", showTooltip = true }: BetaBadgeP
       className={`
         ${variant === "header" ? "text-[0.6rem] px-2 py-0.5" : "text-xs px-2 py-1"}
         ${variant === "floating" ? "fixed top-4 right-4 z-50" : ""}
-        bg-gradient-to-r from-amber-500/30 to-amber-400/20 
-        border border-amber-500/40 
-        text-amber-900
-        font-medium uppercase tracking-wider
-        backdrop-blur-sm
+        bg-transparent hover:bg-transparent
+        border border-[#D4AF37]/40 
+        text-[#D4AF37]
+        font-medium uppercase tracking-[0.18em]
+        rounded-sm
       `}
     >
-      <Sparkles className="h-3 w-3 mr-1" />
       Beta
     </Badge>
   );

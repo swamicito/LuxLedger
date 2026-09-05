@@ -21,15 +21,15 @@ export function Footer() {
   ];
 
   return (
-    <footer style={{ backgroundColor: 'var(--charcoal)', borderTop: '1px solid var(--graphite)' }}>
-      <div className="w-full px-3 sm:px-4 md:container md:mx-auto py-8 sm:py-12">
+    <footer className="w-full" style={{ backgroundColor: 'var(--charcoal)', borderTop: '1px solid rgba(212,175,55,0.22)' }}>
+      <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
         
-        {/* Web3 Identity Banner */}
-        <div className="text-center py-6 mb-8 border-b" style={{ borderColor: 'var(--graphite)' }}>
+        {/* Verified Identity Banner */}
+        <div className="text-center py-6 mb-10 border-b" style={{ borderColor: 'rgba(212,175,55,0.14)' }}>
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Shield className="w-4 h-4" style={{ color: 'var(--gold)' }} />
-            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ivory)' }}>
-              Official Web3 Identity
+            <Shield className="w-4 h-4" style={{ color: 'var(--gold)', opacity: 0.8 }} />
+            <span className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--ivory)' }}>
+              Official Identity
             </span>
           </div>
           <Link 
@@ -71,7 +71,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="hover:underline transition-colors hover:text-amber-400"
+                    className="hover:underline transition-colors hover:text-[#D4AF37]"
                     style={{ color: 'var(--ivory)', fontFamily: 'var(--font-ui)' }}
                   >
                     {link.name}
@@ -103,7 +103,7 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t pt-6 text-center" style={{ borderColor: 'var(--graphite)' }}>
+        <div className="border-t pt-6 text-center" style={{ borderColor: 'rgba(212,175,55,0.14)' }}>
           <p style={{ color: 'var(--ivory)', fontFamily: 'var(--font-ui)' }} className="text-sm">
             © 2026 LuxLedger. All rights reserved.
           </p>

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import realEstateIcon from "@/assets/real-estate-icon.jpg";
 import jewelryIcon from "@/assets/jewelry-icon.jpg";
@@ -10,105 +10,78 @@ export function AssetCategories() {
   
   const categories = [
     {
-      title: "Premium Real Estate",
-      description: "Tokenized luxury properties from Manhattan penthouses to Malibu estates",
+      title: "Real Estate",
+      description: "Residences and estates with verified title, held in escrow through closing.",
       image: realEstateIcon,
-      value: "$2.4B+",
-      growth: "+23%",
-      items: "1,247 Properties",
       filterCategory: "real_estate"
     },
     {
-      title: "Exquisite Jewelry",
-      description: "Rare diamonds, vintage Rolex, and bespoke luxury pieces",
+      title: "Jewelry & Watches",
+      description: "Authenticated stones, signed pieces, and reference timepieces with papers.",
       image: jewelryIcon,
-      value: "$890M+",
-      growth: "+18%",
-      items: "3,891 Items",
       filterCategory: "jewelry"
     },
     {
-      title: "Exotic Vehicles",
-      description: "Supercars, vintage classics, and limited edition automotive art",
+      title: "Collector Cars",
+      description: "Documented provenance, inspection records, and registration handled.",
       image: carsIcon,
-      value: "$1.1B+",
-      growth: "+31%",
-      items: "892 Vehicles",
       filterCategory: "cars"
     }
   ];
 
   return (
-    <section className="py-24 bg-dark-gradient">
-      <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-playfair font-bold mb-6">
-            <span className="text-luxury-gradient">Asset Categories</span>
+    <section className="w-full" style={{ backgroundColor: 'var(--lux-black)' }}>
+      <div className="mx-auto w-full max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
+        <div className="mb-16 text-center lg:mb-20">
+          <h2
+            className="mb-5 text-4xl sm:text-5xl"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--ivory)' }}
+          >
+            The Collection
           </h2>
-          <p className="text-xl text-muted-foreground font-inter max-w-3xl mx-auto">
-            Discover tokenized luxury assets across multiple categories,
-            each backed by real-world value and blockchain security
+          <p className="mx-auto max-w-2xl text-base sm:text-lg" style={{ color: 'var(--ivory)', opacity: 0.72 }}>
+            Authenticated assets across three categories, each verified before it is listed.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {categories.map((category, index) => (
-            <div
+        <div className="grid gap-8 md:grid-cols-3">
+          {categories.map((category) => (
+            <button
               key={category.title}
-              className="luxury-card p-8 group hover:glow-primary transition-all duration-500"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              type="button"
+              onClick={() => navigate(`/marketplace?category=${category.filterCategory}`)}
+              className="group overflow-hidden rounded-lg text-left transition-colors duration-300"
+              style={{ backgroundColor: 'var(--charcoal)', border: '1px solid rgba(212,175,55,0.14)' }}
             >
-              <div className="relative mb-6">
+              <div className="overflow-hidden">
                 <img
                   src={category.image}
                   alt={category.title}
-                  className="w-full h-48 object-cover rounded-lg"
+                  className="h-56 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
-                <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-1">
-                  <div className="flex items-center text-sm font-medium text-green-400">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    {category.growth}
-                  </div>
-                </div>
               </div>
-
-              <div className="space-y-4">
-                <h3 className="text-2xl font-playfair font-semibold text-foreground">
+              <div className="p-8">
+                <h3
+                  className="mb-3 text-2xl"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--ivory)' }}
+                >
                   {category.title}
                 </h3>
-                
-                <p className="text-muted-foreground font-inter leading-relaxed">
+                <p className="mb-6 text-sm leading-relaxed" style={{ color: 'var(--ivory)', opacity: 0.72 }}>
                   {category.description}
                 </p>
-
-                <div className="flex justify-between items-center pt-4 border-t border-border">
-                  <div>
-                    <div className="text-2xl font-bold text-primary font-inter">
-                      {category.value}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {category.items}
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="btn-luxury-outline group-hover:bg-primary group-hover:text-primary-foreground"
-                    onClick={() => navigate(`/marketplace?category=${category.filterCategory}`)}
-                  >
-                    Explore
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
+                <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--gold)' }}>
+                  Explore
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
-        <div className="text-center">
-          <Button className="btn-luxury text-lg py-6 px-12">
-            View All Assets
-            <ArrowRight className="w-5 h-5 ml-2" />
+        <div className="mt-16 text-center">
+          <Button onClick={() => navigate('/marketplace')} className="h-12 px-8 text-sm font-medium tracking-wide">
+            Browse the Collection
           </Button>
         </div>
       </div>

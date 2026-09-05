@@ -6,47 +6,49 @@
 
 @layer base {
   :root {
-    /* Core luxury color palette */
-    --background: 220 27% 4%;
-    --foreground: 46 100% 94%;
+    /* Core luxury color palette
+       Lux Black #0A0A0A · Charcoal #141414 · Graphite #1E1E1F
+       Ivory #F8F6F0 · Imperial Gold #D4AF37 · Deep Gold #B68E2A */
+    --background: 0 0% 4%;
+    --foreground: 45 36% 96%;
 
-    --card: 220 27% 6%;
-    --card-foreground: 46 100% 94%;
+    --card: 0 0% 8%;
+    --card-foreground: 45 36% 96%;
 
-    --popover: 220 27% 6%;
-    --popover-foreground: 46 100% 94%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 45 36% 96%;
 
-    --primary: 46 100% 77%;
-    --primary-foreground: 220 27% 4%;
+    --primary: 46 65% 52%;
+    --primary-foreground: 0 0% 4%;
 
-    --secondary: 220 27% 12%;
-    --secondary-foreground: 46 100% 94%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 45 36% 96%;
 
-    --muted: 220 27% 8%;
-    --muted-foreground: 46 30% 70%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 45 20% 80%;
 
-    --accent: 46 100% 77%;
-    --accent-foreground: 220 27% 4%;
+    --accent: 46 65% 52%;
+    --accent-foreground: 0 0% 4%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 46 100% 94%;
+    --destructive-foreground: 45 36% 96%;
 
-    --border: 220 27% 12%;
-    --input: 220 27% 12%;
-    --ring: 46 100% 77%;
+    --border: 240 2% 12%;
+    --input: 240 2% 12%;
+    --ring: 46 65% 52%;
 
     /* Luxury gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(46 100% 77%), hsl(46 100% 85%));
-    --gradient-dark: linear-gradient(135deg, hsl(220 27% 4%), hsl(220 27% 8%));
-    --gradient-card: linear-gradient(135deg, hsl(220 27% 6%), hsl(220 27% 10%));
-    --gradient-luxury: linear-gradient(135deg, hsl(46 100% 77%), hsl(42 100% 70%), hsl(38 100% 65%));
+    --gradient-primary: linear-gradient(135deg, #D4AF37, #B68E2A);
+    --gradient-dark: linear-gradient(180deg, #0A0A0A, #141414);
+    --gradient-card: linear-gradient(135deg, #141414, #1E1E1F);
+    --gradient-luxury: linear-gradient(135deg, #F6E27A, #D4AF37, #B68E2A);
 
     /* Premium shadows */
-    --shadow-luxury: 0 25px 50px -12px hsl(46 100% 77% / 0.25);
-    --shadow-card: 0 10px 25px -3px hsl(220 27% 4% / 0.1), 0 4px 6px -2px hsl(220 27% 4% / 0.05);
-    --shadow-glow: 0 0 40px hsl(46 100% 77% / 0.3);
+    --shadow-luxury: 0 25px 50px -12px rgba(212, 175, 55, 0.18);
+    --shadow-card: 0 10px 25px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 40px rgba(212, 175, 55, 0.2);
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -174,10 +176,10 @@
   /* Nav link base styles with micro-interactions */
   .nav-link {
     @apply relative px-3 py-2 text-sm font-medium rounded-md;
-    @apply text-muted-foreground;
     @apply transition-all duration-200 ease-out;
-    @apply hover:text-white hover:bg-white/[0.06];
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply hover:bg-white/[0.06];
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    color: var(--ivory);
     transform: translateY(0);
   }
 
@@ -192,13 +194,13 @@
 
   /* Active nav link state */
   .nav-link-active {
-    @apply text-amber-300;
+    color: var(--gold);
   }
 
   .nav-link-active::after {
     content: '';
     @apply absolute bottom-0 left-1/2 -translate-x-1/2;
-    @apply h-0.5 w-5 rounded-full bg-amber-400;
+    @apply h-px w-5 rounded-full bg-[#D4AF37];
     @apply transition-all duration-300;
   }
 
@@ -209,7 +211,7 @@
   /* Nav button with premium micro-interactions */
   .nav-button {
     @apply transition-all duration-200 ease-out;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     transform: translateY(0);
   }
 
@@ -238,7 +240,8 @@
   }
 
   .mobile-menu-item-active {
-    @apply text-amber-400 bg-amber-500/10;
+    @apply bg-[#D4AF37]/10;
+    color: var(--gold);
   }
 
   /* Mobile menu section divider */
@@ -368,14 +371,15 @@
 
   .mobile-menu-premium .menu-item {
     @apply flex items-center gap-3 px-4 py-3.5 rounded-xl;
-    @apply text-base font-medium text-gray-300;
+    @apply text-base font-medium;
     @apply transition-all duration-200;
-    @apply hover:bg-amber-500/10 hover:text-amber-400;
+    @apply hover:bg-[#D4AF37]/10 hover:text-[#D4AF37];
     @apply active:scale-[0.98];
+    color: var(--ivory);
   }
 
   .mobile-menu-premium .menu-item-active {
-    @apply bg-amber-500/15 text-amber-400;
+    @apply bg-[#D4AF37]/15 text-[#D4AF37];
   }
 
   .mobile-menu-premium .menu-divider {
@@ -409,19 +413,22 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Institutional color palette - calm, confident, premium */
-  --charcoal: #0B0B0C;
-  --graphite: #121214;
-  --slate: #1A1A1D;
+  /* Institutional color palette - locked brand values (see brand.css) */
+  --lux-black: #0A0A0A;
+  --charcoal: #141414;
+  --graphite: #1E1E1F;
+  --slate: #1E1E1F;
   --steel: #2A2A2E;
-  --ivory: #F5F5F7;
-  --silver: #9CA3AF;
+  --ivory: #F8F6F0;
+  --silver: rgba(248, 246, 240, 0.72);
   --gold: #D4AF37;
+  --gold-deep: #B68E2A;
+  --gold-hi: #F6E27A;
   --gold-muted: rgba(212, 175, 55, 0.15);
   --gold-subtle: rgba(212, 175, 55, 0.08);
   
-  /* Typography scale - 1.25 ratio */
-  --font-display: 'Playfair Display', Georgia, serif;
+  /* Typography - one display face only */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   
   /* Spacing scale - 4px base */
@@ -524,9 +531,9 @@
   }
   
   .btn-primary:hover {
-    background: #E5C04B;
+    background: var(--gold-deep);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
   }
   
   .btn-primary:active {
@@ -579,9 +586,9 @@
   /* Trust Badges */
   .trust-badge {
     @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium;
-    background: rgba(34, 197, 94, 0.1);
-    color: #22C55E;
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    background: var(--gold-subtle);
+    color: var(--ivory);
+    border: 1px solid var(--gold-muted);
   }
   
   .trust-badge-gold {
