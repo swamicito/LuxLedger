@@ -30,6 +30,8 @@ import Activity from '@/pages/Activity';
 import MyListings from '@/pages/MyListings';
 import Notifications from '@/pages/Notifications';
 import TransactionDetail from '@/pages/TransactionDetail';
+import BuyerOrderWorkspace from '@/pages/BuyerOrderWorkspace';
+import SellerFulfillmentWorkspace from '@/pages/SellerFulfillmentWorkspace';
 import Help from '@/pages/Help';
 import UserProfile from '@/pages/UserProfile';
 import Account from '@/pages/Account';
@@ -85,6 +87,9 @@ const App = () => (
               <Route path="/my-listings" element={<MyListings />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/activity/:id" element={<TransactionDetail />} />
+              <Route path="/transactions/:id" element={<TransactionDetail />} />
+              <Route path="/order/:escrowId" element={<BuyerOrderWorkspace />} />
+              <Route path="/fulfill/:escrowId" element={<SellerFulfillmentWorkspace />} />
               <Route path="/help" element={<Help />} />
               <Route path="/u/:username" element={<UserProfile />} />
               <Route path="/account" element={<Account />} />
