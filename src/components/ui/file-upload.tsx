@@ -35,25 +35,33 @@ export function FileUpload({
 
     setUploading(true);
     try {
-      let urls: string[];
       if (storageUserId) {
+        // Storage-backed mode: upload to the asset-images bucket first and only
+        // hand back public URLs. Never fall back to blob: URLs here.
         const results = await uploadImages(validFiles, storageUserId);
-        urls = results.map(r => r.url).filter((url): url is string => !!url);
+        const urls = results
+          .map(r => r.url)
+          .filter((url): url is string => !!url && !url.startsWith('blob:'));
         const failures = results.filter(r => !r.success || !r.url);
         if (failures.length > 0) {
-          console.error('Image upload failures:', failures.map(f => f.error));
-          toast.error(`${failures.length} image(s) failed to upload`);
+          const reason = failures.map(f => f.error).filter(Boolean).join('; ') || 'unknown error';
+          console.error('Image upload failures:', failures);
+          toast.error(`${failures.length} image(s) failed to upload: ${reason}`);
         }
-      } else {
-        urls = validFiles.map(file => URL.createObjectURL(file));
+        if (urls.length > 0) {
+          onUpload(urls);
+          toast.success(`${urls.length} photo(s) uploaded`);
+        }
+        return;
       }
-      if (urls.length > 0) {
-        onUpload(urls);
-        toast.success(`${urls.length} file(s) uploaded successfully`);
-      }
+
+      // Preview-only mode (no storage user): local object URLs for in-tab display.
+      const urls = validFiles.map(file => URL.createObjectURL(file));
+      onUpload(urls);
+      toast.success(`${urls.length} file(s) added`);
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error("Failed to upload files");
+      toast.error(error instanceof Error ? `Upload failed: ${error.message}` : "Failed to upload files");
     } finally {
       setUploading(false);
     }

@@ -144,8 +144,14 @@ export default function ListAsset() {
   }
 
   const handleImagesUploaded = (urls: string[]) => {
-    // FileUpload returns real public storage URLs when storageUserId is set.
-    setImages(urls);
+    // FileUpload returns public storage URLs (storageUserId is set). Append, never
+    // replace, and drop anything that is not a persistable URL.
+    const persistable = urls.filter((url) => url && !url.startsWith("blob:"));
+    if (persistable.length !== urls.length) {
+      toast.error("Some photos did not upload to storage and were not attached.");
+    }
+    if (persistable.length === 0) return;
+    setImages((prev) => [...prev, ...persistable.filter((url) => !prev.includes(url))]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +159,11 @@ export default function ListAsset() {
 
     if (!title || !category || !estimatedValue || images.length === 0) {
       toast.error("Please fill in all required fields and upload at least one photo.");
+      return;
+    }
+
+    if (images.some((url) => url.startsWith("blob:"))) {
+      toast.error("One or more photos were not saved to storage. Remove them and upload again.");
       return;
     }
 
@@ -397,7 +408,7 @@ export default function ListAsset() {
                     accept="image/*"
                     multiple
                     maxSize={10 * 1024 * 1024}
-                    storageUserId={user?.id}
+                    storageUserId={user.id}
                   />
                   {images.length > 0 && (
                     <div className="mt-3">
