@@ -144,7 +144,7 @@ export default function ListAsset() {
   }
 
   const handleImagesUploaded = (urls: string[]) => {
-    // For now FileUpload uses object URLs; later this should be real storage URLs.
+    // FileUpload returns real public storage URLs when storageUserId is set.
     setImages(urls);
   };
 
@@ -397,6 +397,7 @@ export default function ListAsset() {
                     accept="image/*"
                     multiple
                     maxSize={10 * 1024 * 1024}
+                    storageUserId={user?.id}
                   />
                   {images.length > 0 && (
                     <div className="mt-3">

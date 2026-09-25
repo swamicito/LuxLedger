@@ -186,31 +186,41 @@ export default function AssetPurchase() {
         ]);
 
         const nowIso = new Date().toISOString();
+        const insertPayload = {
+          buyer_id: user.id,
+          seller_id: asset.owner_id,
+          asset_id: asset.id,
+          amount_usd: asset.estimated_value,
+          platform_fee_usd: Number((asset.estimated_value * 0.025).toFixed(2)),
+          buyer_address:
+            buyerProfile?.wallet_address ?? `pending:${user.id}`,
+          seller_address:
+            sellerProfile?.wallet_address ?? `pending:${asset.owner_id}`,
+          status: 'funded',
+          escrow_status: 'held',
+          funded_at: nowIso,
+          created_at: nowIso,
+        };
         const { data: escrowRow, error: insertError } = await supabase
           .from('escrow_transactions')
-          .insert({
-            buyer_id: user.id,
-            seller_id: asset.owner_id,
-            asset_id: asset.id,
-            amount_usd: asset.estimated_value,
-            platform_fee_usd: Number((asset.estimated_value * 0.025).toFixed(2)),
-            buyer_address:
-              buyerProfile?.wallet_address ?? `pending:${user.id}`,
-            seller_address:
-              sellerProfile?.wallet_address ?? `pending:${asset.owner_id}`,
-            status: 'funded',
-            escrow_status: 'held',
-            funded_at: nowIso,
-            created_at: nowIso,
-          })
+          .insert(insertPayload)
           .select('id')
           .single();
 
         if (insertError || !escrowRow) {
           // eslint-disable-next-line no-console
-          console.error('Failed to persist escrow_transactions row:', insertError);
+          console.error('escrow_transactions insert failed', {
+            code: insertError?.code,
+            message: insertError?.message,
+            details: insertError?.details,
+            hint: insertError?.hint,
+            payload: insertPayload,
+          });
           toast.error(
-            'On-chain escrow created, but we could not record it. Please contact support.'
+            `Escrow record failed: ${insertError?.message ?? 'no row returned'}${
+              insertError?.code ? ` (code ${insertError.code})` : ''
+            }`,
+            { duration: 10000 }
           );
           setPurchaseStep('details');
           return;
@@ -289,7 +299,7 @@ export default function AssetPurchase() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--lux-black)' }}>
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: 'var(--lux-gold)' }}>
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: '#D4AF37' }}>
             <Shield className="w-10 h-10" style={{ color: 'var(--lux-black)' }} />
           </div>
           <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--ivory)', fontFamily: 'var(--font-display)' }}>
@@ -305,22 +315,14 @@ export default function AssetPurchase() {
             {useEscrow && createdEscrowId ? (
               <Button
                 onClick={() => navigate(`/order/${createdEscrowId}`)}
-                className="w-full"
-                style={{
-                  background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)',
-                  color: 'var(--lux-black)'
-                }}
+                className="w-full bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#B68E2A]"
               >
                 Track Your Order
               </Button>
             ) : (
               <Button
                 onClick={() => navigate('/portfolio')}
-                className="w-full"
-                style={{
-                  background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)',
-                  color: 'var(--lux-black)'
-                }}
+                className="w-full bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#B68E2A]"
               >
                 View Portfolio
               </Button>
@@ -329,7 +331,7 @@ export default function AssetPurchase() {
               variant="outline" 
               onClick={() => navigate('/marketplace')}
               className="w-full"
-              style={{ borderColor: 'var(--lux-gold)', color: 'var(--lux-gold)' }}
+              style={{ borderColor: '#D4AF37', color: '#D4AF37' }}
             >
               Continue Shopping
             </Button>
@@ -347,7 +349,7 @@ export default function AssetPurchase() {
           variant="ghost"
           onClick={() => navigate('/marketplace')}
           className="mb-8 gap-2"
-          style={{ color: 'var(--lux-gold)' }}
+          style={{ color: '#D4AF37' }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Marketplace
@@ -356,7 +358,7 @@ export default function AssetPurchase() {
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Asset Images */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-2xl overflow-hidden" style={{ background: 'var(--lux-dark-gray)' }}>
+            <div className="aspect-square rounded-2xl overflow-hidden" style={{ background: '#141414' }}>
               {asset.images && asset.images.length > 0 ? (
                 <img 
                   src={asset.images[0]} 
@@ -365,18 +367,18 @@ export default function AssetPurchase() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Eye className="w-16 h-16" style={{ color: 'var(--lux-gold)', opacity: 0.5 }} />
+                  <Eye className="w-16 h-16" style={{ color: '#D4AF37', opacity: 0.5 }} />
                 </div>
               )}
             </div>
             
             {/* Action Buttons */}
             <div className="flex gap-4">
-              <Button variant="outline" className="flex-1 gap-2" style={{ borderColor: 'var(--lux-gold)', color: 'var(--lux-gold)' }}>
+              <Button variant="outline" className="flex-1 gap-2" style={{ borderColor: '#D4AF37', color: '#D4AF37' }}>
                 <Heart className="w-4 h-4" />
                 Save
               </Button>
-              <Button variant="outline" className="flex-1 gap-2" style={{ borderColor: 'var(--lux-gold)', color: 'var(--lux-gold)' }}>
+              <Button variant="outline" className="flex-1 gap-2" style={{ borderColor: '#D4AF37', color: '#D4AF37' }}>
                 <Share2 className="w-4 h-4" />
                 Share
               </Button>
@@ -409,21 +411,21 @@ export default function AssetPurchase() {
             {/* Asset Info */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <User className="w-5 h-5" style={{ color: 'var(--lux-gold)' }} />
+                <User className="w-5 h-5" style={{ color: '#D4AF37' }} />
                 <span style={{ color: 'var(--ivory)' }}>
                   Owned by <strong>{asset.profiles?.full_name || 'Anonymous'}</strong>
                 </span>
               </div>
               
               <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5" style={{ color: 'var(--lux-gold)' }} />
+                <MapPin className="w-5 h-5" style={{ color: '#D4AF37' }} />
                 <span style={{ color: 'var(--ivory)' }}>
                   {asset.region.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
               
               <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5" style={{ color: 'var(--lux-gold)' }} />
+                <Clock className="w-5 h-5" style={{ color: '#D4AF37' }} />
                 <span style={{ color: 'var(--ivory)' }}>
                   Listed {new Date(asset.created_at).toLocaleDateString()}
                 </span>
@@ -498,11 +500,7 @@ export default function AssetPurchase() {
                   <Button
                     onClick={handlePurchase}
                     disabled={!user}
-                    className="w-full py-6 text-lg font-semibold"
-                    style={{
-                      background: 'linear-gradient(135deg, var(--lux-gold) 0%, #FFD700 100%)',
-                      color: 'var(--lux-black)'
-                    }}
+                    className="w-full py-6 text-lg font-semibold bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#B68E2A]"
                   >
                     {useEscrow ? 'Purchase with Escrow' : 'Buy Now'}
                   </Button>

@@ -2,19 +2,22 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, File, X } from "lucide-react";
 import { toast } from "sonner";
+import { uploadImages } from "@/lib/storage";
 
 interface FileUploadProps {
   onUpload: (urls: string[]) => void;
   accept?: string;
   multiple?: boolean;
   maxSize?: number;
+  storageUserId?: string;
 }
 
 export function FileUpload({ 
   onUpload, 
   accept = "*/*", 
   multiple = false,
-  maxSize = 5 * 1024 * 1024 // 5MB default
+  maxSize = 5 * 1024 * 1024, // 5MB default
+  storageUserId,
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -32,10 +35,22 @@ export function FileUpload({
 
     setUploading(true);
     try {
-      // Simulate file upload - in a real app, you'd upload to Supabase Storage
-      const urls = validFiles.map(file => URL.createObjectURL(file));
-      onUpload(urls);
-      toast.success(`${validFiles.length} file(s) uploaded successfully`);
+      let urls: string[];
+      if (storageUserId) {
+        const results = await uploadImages(validFiles, storageUserId);
+        urls = results.map(r => r.url).filter((url): url is string => !!url);
+        const failures = results.filter(r => !r.success || !r.url);
+        if (failures.length > 0) {
+          console.error('Image upload failures:', failures.map(f => f.error));
+          toast.error(`${failures.length} image(s) failed to upload`);
+        }
+      } else {
+        urls = validFiles.map(file => URL.createObjectURL(file));
+      }
+      if (urls.length > 0) {
+        onUpload(urls);
+        toast.success(`${urls.length} file(s) uploaded successfully`);
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error("Failed to upload files");
