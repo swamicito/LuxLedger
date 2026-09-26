@@ -315,6 +315,13 @@ export default function BuyerOrderWorkspace() {
 
   const confirmReceipt = useCallback(async () => {
     if (!escrow) return;
+    if (!escrow.tracking_delivered) {
+      toast.error('Confirm becomes available once the carrier reports delivery.');
+      return;
+    }
+    if (escrow.buyer_confirmed || escrow.dispute_active || escrow.escrow_status === 'released') {
+      return;
+    }
     setActing(true);
     const now = new Date().toISOString();
     const { error: updateError } = await supabase
@@ -582,9 +589,14 @@ export default function BuyerOrderWorkspace() {
                       escrow while it is reviewed.
                     </p>
                     <Button
-                      className="w-full bg-emerald-500 text-black hover:bg-emerald-400"
+                      className={
+                        canConfirm
+                          ? 'w-full bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#B68E2A]'
+                          : 'w-full bg-white/10 text-muted-foreground cursor-not-allowed hover:bg-white/10 disabled:opacity-100'
+                      }
                       onClick={confirmReceipt}
                       disabled={!canConfirm || acting}
+                      aria-disabled={!canConfirm || acting}
                     >
                       {acting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
