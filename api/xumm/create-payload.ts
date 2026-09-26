@@ -56,6 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       uuid: data.uuid,
       next: data.next,
+      refs: data.refs
+        ? { qr_png: data.refs.qr_png, websocket_status: data.refs.websocket_status }
+        : undefined,
     });
   } catch (error) {
     console.error('XUMM payload creation error:', error);

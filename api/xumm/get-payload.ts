@@ -51,14 +51,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Only return what the client needs
     return res.status(200).json({
       meta: {
-        resolved: data.meta?.resolved,
-        signed: data.meta?.signed,
-        expired: data.meta?.expired,
+        resolved: data.meta?.resolved ?? false,
+        signed: data.meta?.signed ?? false,
+        expired: data.meta?.expired ?? false,
+        cancelled: data.meta?.cancelled ?? false,
       },
       response: {
         account: data.response?.account,
         txid: data.response?.txid,
         signer_pubkey: data.response?.signer_pubkey,
+        dispatched_result: data.response?.dispatched_result,
       },
     });
   } catch (error) {

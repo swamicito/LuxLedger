@@ -139,18 +139,41 @@ export default function AssetPurchase() {
 
     try {
       if (useEscrow) {
-        // Create escrow transaction
+        // Resolve wallet addresses first: the seller must be able to receive
+        // XRP, and the buyer's real address comes back from the Xaman signer.
+        const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('wallet_address')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('profiles')
+            .select('wallet_address')
+            .eq('user_id', asset.owner_id)
+            .maybeSingle(),
+        ]);
+
+        const sellerWallet = sellerProfile?.wallet_address ?? '';
+        if (!/^r[1-9A-HJ-NP-Za-km-z]{24,33}$/.test(sellerWallet)) {
+          toast.error(
+            'This seller cannot receive escrow payments yet — no XRPL wallet on file.',
+            { duration: 8000 }
+          );
+          setPurchaseStep('details');
+          return;
+        }
+
+        // Create the on-chain escrow on XRPL testnet. The buyer signs the
+        // EscrowCreate in Xaman; this throws on any failure and nothing is
+        // recorded in the database when it does.
         const escrowResult = await multichainAdapter.createEscrow({
-          chain: selectedChain,
-          seller: asset.owner_id,
+          chain: 'xrpl',
+          seller: sellerWallet,
           buyer: user.id,
           amount: asset.estimated_value.toString(),
           expirationDays: 7,
-          metadata: JSON.stringify({
-            assetId: asset.id,
-            title: asset.title,
-            category: asset.category
-          })
+          metadata: asset.id,
         });
 
         // Track escrow usage for subscription analytics
@@ -169,43 +192,54 @@ export default function AssetPurchase() {
         }
 
         // Persist the escrow as the canonical row that drives the entire
-        // post-transaction system. The chain result is recorded as metadata;
-        // the Supabase UUID is what every workspace (buyer, seller, dashboard,
-        // dispute center, evaluate_escrow_release) operates on.
-        const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('wallet_address')
-            .eq('user_id', user.id)
-            .maybeSingle(),
-          supabase
-            .from('profiles')
-            .select('wallet_address')
-            .eq('user_id', asset.owner_id)
-            .maybeSingle(),
-        ]);
-
+        // post-transaction system — only after the EscrowCreate is validated
+        // on-chain. Chain fields: tx hash, escrow sequence, real addresses.
         const nowIso = new Date().toISOString();
         const insertPayload = {
           buyer_id: user.id,
           seller_id: asset.owner_id,
           asset_id: asset.id,
           amount_usd: asset.estimated_value,
+          amount_xrp: escrowResult.amountXrp ?? null,
           platform_fee_usd: Number((asset.estimated_value * 0.025).toFixed(2)),
           buyer_address:
-            buyerProfile?.wallet_address ?? `pending:${user.id}`,
-          seller_address:
-            sellerProfile?.wallet_address ?? `pending:${asset.owner_id}`,
+            escrowResult.buyerAddress ?? buyerProfile?.wallet_address ?? `pending:${user.id}`,
+          seller_address: sellerWallet,
+          escrow_sequence: escrowResult.escrowSequence ?? null,
+          escrow_create_tx_hash: escrowResult.txHash,
           status: 'funded',
           escrow_status: 'held',
           funded_at: nowIso,
           created_at: nowIso,
         };
-        const { data: escrowRow, error: insertError } = await supabase
+
+        let escrowRow: { id: string } | null = null;
+        let insertError: { code?: string; message?: string; details?: string; hint?: string } | null = null;
+
+        const firstAttempt = await supabase
           .from('escrow_transactions')
           .insert(insertPayload)
           .select('id')
           .single();
+        escrowRow = firstAttempt.data;
+        insertError = firstAttempt.error;
+
+        // If production hasn't added escrow_create_tx_hash yet, retry without
+        // it so the purchase still records (the chain refs stay in the toast/log).
+        if (
+          insertError &&
+          (insertError.code === '42703' || insertError.code === 'PGRST204' ||
+            (insertError.message ?? '').includes('escrow_create_tx_hash'))
+        ) {
+          const { escrow_create_tx_hash: _dropped, ...payloadWithoutChainHash } = insertPayload;
+          const retry = await supabase
+            .from('escrow_transactions')
+            .insert(payloadWithoutChainHash)
+            .select('id')
+            .single();
+          escrowRow = retry.data;
+          insertError = retry.error;
+        }
 
         if (insertError || !escrowRow) {
           // eslint-disable-next-line no-console
@@ -217,10 +251,10 @@ export default function AssetPurchase() {
             payload: insertPayload,
           });
           toast.error(
-            `Escrow record failed: ${insertError?.message ?? 'no row returned'}${
-              insertError?.code ? ` (code ${insertError.code})` : ''
+            `On-chain escrow created (${escrowResult.txHash}) but we could not record it: ${
+              insertError?.message ?? 'no row returned'
             }`,
-            { duration: 10000 }
+            { duration: 12000 }
           );
           setPurchaseStep('details');
           return;
@@ -245,8 +279,12 @@ export default function AssetPurchase() {
 
       setPurchaseStep('complete');
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Purchase failed:', error);
-      toast.error('Purchase failed. Please try again.');
+      toast.error(
+        error instanceof Error ? error.message : 'Purchase failed. Please try again.',
+        { duration: 8000 }
+      );
       setPurchaseStep('details');
     }
   };
@@ -469,25 +507,30 @@ export default function AssetPurchase() {
                       Select Network
                     </h4>
                     <div className="grid grid-cols-3 gap-2">
-                      {(['xrpl', 'ethereum', 'polygon'] as const).map((chain) => (
-                        <button
-                          key={chain}
-                          onClick={() => setSelectedChain(chain)}
-                          className="py-3 px-3 rounded-lg transition-all duration-150"
-                          style={{
-                            background: selectedChain === chain ? 'rgba(212, 175, 55, 0.08)' : '#0B0B0C',
-                            border: selectedChain === chain ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(255,255,255,0.06)',
-                          }}
-                        >
-                          <div className="text-sm font-semibold" style={{ color: selectedChain === chain ? '#D4AF37' : '#F5F5F7' }}>
-                            {chain === 'xrpl' ? 'XRPL' : chain.charAt(0).toUpperCase() + chain.slice(1)}
-                          </div>
-                          <div className="text-[10px] mt-0.5" style={{ color: '#6B7280' }}>
-                            {chain === 'xrpl' ? 'Fast & Low Cost' : 
-                             chain === 'ethereum' ? 'Most Secure' : 'Low Fees'}
-                          </div>
-                        </button>
-                      ))}
+                      {(['xrpl', 'ethereum', 'polygon'] as const).map((chain) => {
+                        const disabled = chain !== 'xrpl';
+                        return (
+                          <button
+                            key={chain}
+                            onClick={() => !disabled && setSelectedChain(chain)}
+                            disabled={disabled}
+                            className="py-3 px-3 rounded-lg transition-all duration-150"
+                            style={{
+                              background: selectedChain === chain ? 'rgba(212, 175, 55, 0.08)' : '#0B0B0C',
+                              border: selectedChain === chain ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(255,255,255,0.06)',
+                              opacity: disabled ? 0.4 : 1,
+                              cursor: disabled ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <div className="text-sm font-semibold" style={{ color: selectedChain === chain ? '#D4AF37' : '#F5F5F7' }}>
+                              {chain === 'xrpl' ? 'XRPL' : chain.charAt(0).toUpperCase() + chain.slice(1)}
+                            </div>
+                            <div className="text-[10px] mt-0.5" style={{ color: '#6B7280' }}>
+                              {chain === 'xrpl' ? 'Xaman · Testnet' : 'Soon'}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

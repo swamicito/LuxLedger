@@ -3,8 +3,7 @@
  * Provides unified interface across different blockchain networks
  */
 
-import { XRPLEscrowContract, createXRPLEscrow } from '../contracts/xrpl-escrow';
-import { EVMEscrowContract, createEVMEscrowContract } from '../contracts/evm-escrow-interface';
+import { createEscrowViaXaman } from '@/lib/escrow/xaman-escrow';
 
 export type SupportedChain = 'xrpl' | 'ethereum' | 'polygon' | 'solana';
 
@@ -39,6 +38,9 @@ export interface UnifiedEscrowResult {
   txHash: string;
   explorerUrl: string;
   status: 'pending' | 'confirmed' | 'failed';
+  escrowSequence?: number;
+  buyerAddress?: string;
+  amountXrp?: number;
 }
 
 const CHAIN_CONFIGS: Record<SupportedChain, ChainConfig> = {
@@ -87,20 +89,8 @@ const CHAIN_CONFIGS: Record<SupportedChain, ChainConfig> = {
 };
 
 export class MultichainEscrowAdapter {
-  private xrplContract?: XRPLEscrowContract;
-  private evmContracts: Map<SupportedChain, EVMEscrowContract> = new Map();
-
-  constructor() {
-    this.initializeContracts();
-  }
-
-  private async initializeContracts() {
-    // Initialize XRPL contract
-    this.xrplContract = createXRPLEscrow('mainnet');
-
-    // EVM contracts would be initialized with proper signers in production
-    // For now, we'll create placeholders
-  }
+  // XRPL escrow goes through Xaman signing (see xaman-escrow.ts). The mock
+  // contract/EVM placeholders were removed — only XRPL is a live path.
 
   /**
    * Create escrow on specified chain
@@ -122,58 +112,44 @@ export class MultichainEscrowAdapter {
   }
 
   private async createXRPLEscrow(
-    params: UnifiedEscrowParams, 
-    config: ChainConfig
+    params: UnifiedEscrowParams,
+    _config: ChainConfig
   ): Promise<UnifiedEscrowResult> {
-    if (!this.xrplContract) {
-      throw new Error('XRPL contract not initialized');
-    }
-
-    const escrowTx = this.xrplContract.createEscrow({
-      destination: params.seller,
-      amount: this.convertToDrops(params.amount),
-      cancelAfter: Math.floor(Date.now() / 1000) + (params.expirationDays * 86400)
+    // Real on-chain escrow: the buyer signs an EscrowCreate through Xaman.
+    // params.seller must be the seller's XRPL address; params.buyer is the
+    // buyer's user id (memo) — the signer account comes back from Xaman.
+    const result = await createEscrowViaXaman({
+      amountUsd: parseFloat(params.amount),
+      sellerAddress: params.seller,
+      assetId: params.metadata,
+      assetTitle: undefined,
+      buyerUserId: params.buyer,
+      expirationDays: params.expirationDays,
     });
 
-    // In production, this would submit to XRPL network
-    const mockTxHash = `xrpl_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-    
     return {
-      escrowId: mockTxHash,
-      txHash: mockTxHash,
-      explorerUrl: `${config.blockExplorerUrls[0]}/tx/${mockTxHash}`,
-      status: 'pending'
+      escrowId: result.txHash,
+      txHash: result.txHash,
+      explorerUrl: result.explorerUrl,
+      status: 'confirmed',
+      escrowSequence: result.escrowSequence,
+      buyerAddress: result.buyerAddress,
+      amountXrp: result.amountXrp,
     };
   }
 
   private async createEVMEscrow(
-    params: UnifiedEscrowParams, 
-    config: ChainConfig
+    _params: UnifiedEscrowParams,
+    _config: ChainConfig
   ): Promise<UnifiedEscrowResult> {
-    // In production, this would use actual ethers.js signer
-    const mockTxHash = `evm_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-    
-    return {
-      escrowId: mockTxHash,
-      txHash: mockTxHash,
-      explorerUrl: `${config.blockExplorerUrls[0]}/tx/${mockTxHash}`,
-      status: 'pending'
-    };
+    throw new Error('Only XRPL escrow is supported. Select XRPL to continue.');
   }
 
   private async createSolanaEscrow(
-    params: UnifiedEscrowParams, 
-    config: ChainConfig
+    _params: UnifiedEscrowParams,
+    _config: ChainConfig
   ): Promise<UnifiedEscrowResult> {
-    // In production, this would use @solana/web3.js
-    const mockTxHash = `sol_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-    
-    return {
-      escrowId: mockTxHash,
-      txHash: mockTxHash,
-      explorerUrl: `${config.blockExplorerUrls[0]}/tx/${mockTxHash}`,
-      status: 'pending'
-    };
+    throw new Error('Only XRPL escrow is supported. Select XRPL to continue.');
   }
 
   /**
@@ -249,9 +225,6 @@ export class MultichainEscrowAdapter {
     return mockFees[params.chain];
   }
 
-  private convertToDrops(xrpAmount: string): string {
-    return (parseFloat(xrpAmount) * 1000000).toString();
-  }
 }
 
 // Cross-chain bridge utilities
