@@ -1,33 +1,16 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { xrplClient } from '@/lib/xrpl-client';
 import { autoRegister } from '@/lib/luxbroker/auto-register';
-
-// Server-side XUMM API helpers (secret never leaves the server)
-async function createXummPayload(txjson: Record<string, unknown>) {
-  const response = await fetch('/api/xumm/create-payload', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ txjson }),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to create XUMM payload');
-  }
-  return response.json() as Promise<{ uuid: string; next: { always: string } }>;
-}
-
-async function getXummPayload(uuid: string) {
-  const response = await fetch(`/api/xumm/get-payload?uuid=${encodeURIComponent(uuid)}`);
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to get XUMM payload');
-  }
-  return response.json() as Promise<{
-    meta: { resolved: boolean; signed: boolean; expired: boolean };
-    response: { account?: string; txid?: string; signer_pubkey?: string };
-  }>;
-}
+import { supabase } from '@/lib/supabase-client';
+import {
+  createPayload as createXummPayload,
+  getPayload as getXummPayload,
+  waitForSignature,
+  savePendingSignIn,
+  readPendingSignIn,
+  clearPendingSignIn,
+} from '@/lib/escrow/xaman-escrow';
 
 // Enhanced Wallet Account Interface
 interface WalletAccount {
@@ -58,7 +41,73 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
 
-  // Check for existing wallet connection on mount
+  // Persist the connected wallet on profiles.wallet_address for auth.uid() —
+  // this is what makes the user escrow-able (buyer/seller r-address lookups).
+  const finalizeWalletConnect = useCallback(
+    async (walletAddress: string, signerPubkey?: string) => {
+      // Account metadata is best-effort — never block the connect on it.
+      let balance = '0';
+      let trustlines: any[] = [];
+      let nfts: any[] = [];
+      try {
+        balance = await xrplClient.getAccountBalance(walletAddress);
+        trustlines = await xrplClient.getAccountTrustlines(walletAddress);
+        nfts = await xrplClient.getAccountNFTs(walletAddress);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Wallet metadata fetch failed (non-critical):', error);
+      }
+
+      const connectedAccount: WalletAccount = {
+        address: walletAddress,
+        balance: `${balance} XRP`,
+        network: import.meta.env.VITE_XRPL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet',
+        publicKey: signerPubkey,
+        trustlines,
+        nfts,
+      };
+
+      setAccount(connectedAccount);
+      localStorage.setItem('luxledger_wallet', JSON.stringify(connectedAccount));
+
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const uid = authData?.user?.id;
+        if (uid) {
+          const { error: walletWriteError } = await supabase
+            .from('profiles')
+            .update({ wallet_address: walletAddress })
+            .eq('user_id', uid);
+          if (walletWriteError) {
+            // eslint-disable-next-line no-console
+            console.error('[wallet] profiles.wallet_address write failed', walletWriteError);
+            toast({
+              title: 'Wallet connected but not saved',
+              description: walletWriteError.message,
+              variant: 'destructive',
+            });
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[wallet] profile persist failed', error);
+      }
+
+      autoRegister.registerSeller(walletAddress).catch(() => {
+        // Silently fail - non-critical for wallet connection
+      });
+
+      toast({
+        title: 'Wallet Connected',
+        description: `Connected to ${walletAddress.slice(0, 8)}...`,
+      });
+    },
+    [toast]
+  );
+
+  // Check for existing wallet connection on mount, then resume a pending
+  // Xaman SignIn — a phone that backgrounded/killed the tab mid-sign would
+  // otherwise leave the site showing "Connect Wallet" after a real sign.
   useEffect(() => {
     const savedAccount = localStorage.getItem('luxledger_wallet');
     if (savedAccount) {
@@ -68,7 +117,27 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('luxledger_wallet');
       }
     }
-  }, []);
+
+    const pending = readPendingSignIn();
+    if (!pending) return;
+    (async () => {
+      try {
+        const status = await getXummPayload(pending.uuid);
+        if (status.meta?.resolved) {
+          if (status.meta.signed && status.response?.account) {
+            await finalizeWalletConnect(
+              status.response.account,
+              status.response.signer_pubkey as string | undefined
+            );
+          }
+          clearPendingSignIn();
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[wallet] pending sign-in resume failed', error);
+      }
+    })();
+  }, [finalizeWalletConnect]);
 
   const connectWallet = async () => {
     setIsConnecting(true);
@@ -117,49 +186,27 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           TransactionType: 'SignIn'
         });
 
-        if (signInRequest?.next?.always) {
-          // Open XUMM app/browser
-          window.open(signInRequest.next.always, '_blank');
-          
-          // Poll for user to sign in
-          const signInResult = await getXummPayload(signInRequest.uuid);
-          
-          if (signInResult?.response?.account) {
-            const walletAddress = signInResult.response.account;
-            
-            // Get account data from XRPL
-            const balance = await xrplClient.getAccountBalance(walletAddress);
-            const trustlines = await xrplClient.getAccountTrustlines(walletAddress);
-            const nfts = await xrplClient.getAccountNFTs(walletAddress);
-
-            const connectedAccount: WalletAccount = {
-              address: walletAddress,
-              balance: `${balance} XRP`,
-              network: import.meta.env.VITE_XRPL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet',
-              publicKey: signInResult.response.signer_pubkey,
-              trustlines,
-              nfts
-            };
-
-            setAccount(connectedAccount);
-            localStorage.setItem('luxledger_wallet', JSON.stringify(connectedAccount));
-
-            // Auto-register seller with LuxBroker system
-            try {
-              await autoRegister.registerSeller(walletAddress);
-            } catch (error) {
-              console.log('Auto-register failed (non-critical):', error);
-            }
-
-            toast({
-              title: "Wallet Connected",
-              description: `Connected to ${walletAddress.slice(0, 8)}...`,
-            });
-          } else {
-            throw new Error('User cancelled sign-in');
-          }
-        } else {
+        if (!signInRequest?.next?.always || !signInRequest.uuid) {
           throw new Error('Failed to create XUMM sign-in request');
+        }
+
+        // Persist before the app-switch: if the mobile tab reloads, the mount
+        // effect above completes this sign-in without a second tap.
+        savePendingSignIn(signInRequest.uuid);
+        window.open(signInRequest.next.always, '_blank');
+
+        // Poll until the user signs or declines — wakes on visibility/focus.
+        const signInResult = await waitForSignature(signInRequest.uuid);
+
+        if (signInResult.meta?.signed && signInResult.response?.account) {
+          await finalizeWalletConnect(
+            signInResult.response.account,
+            signInResult.response.signer_pubkey as string | undefined
+          );
+          clearPendingSignIn();
+        } else {
+          clearPendingSignIn();
+          throw new Error('Sign-in was declined or expired in Xaman.');
         }
       }
 
@@ -236,10 +283,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
       if (trustlinePayload?.next?.always) {
         window.open(trustlinePayload.next.always, '_blank');
-        
-        const result = await getXummPayload(trustlinePayload.uuid);
-        
-        if (result?.response?.txid) {
+
+        const result = await waitForSignature(trustlinePayload.uuid);
+
+        if (result.meta?.signed && result.response?.txid) {
           toast({
             title: "Trustline Created",
             description: `Trustline for ${currency} created successfully`,
@@ -288,10 +335,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
       if (payload?.next?.always) {
         window.open(payload.next.always, '_blank');
-        
-        const result = await getXummPayload(payload.uuid);
-        
-        if (result?.response?.txid) {
+
+        const result = await waitForSignature(payload.uuid);
+
+        if (result.meta?.signed && result.response?.txid) {
           toast({
             title: "Transaction Signed",
             description: "Transaction has been signed and submitted.",

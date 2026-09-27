@@ -60,7 +60,9 @@ const POLL_INTERVAL_MS = 3000;
 // fully reloaded when the user returns from Xaman, destroying the async chain.
 // Persisting the uuid lets the purchase page resume and still write the row.
 const PENDING_KEY = 'luxledger_pending_xaman_escrow';
-const PENDING_TTL_MS = 30 * 60 * 1000;
+// The signed tx already exists on-chain — keep retryable far longer than a
+// mobile signing session so a later mount can still record the hash.
+const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 
 export interface PendingXamanEscrow {
   uuid: string;
@@ -69,6 +71,9 @@ export interface PendingXamanEscrow {
   sellerAddress: string;
   amountUsd: number;
   createdAt: number;
+  // Set in the same tick the chain tx verifies tesSUCCESS. Once present the
+  // pending entry no longer depends on the Xaman payload surviving.
+  result?: XamanEscrowResult;
 }
 
 export function savePendingEscrow(pending: Omit<PendingXamanEscrow, 'createdAt'>): void {
@@ -102,7 +107,17 @@ export function clearPendingEscrow(): void {
   }
 }
 
-async function createPayload(txjson: Record<string, unknown>): Promise<XummPayloadCreateResponse> {
+function updatePendingEscrow(patch: Partial<PendingXamanEscrow>): void {
+  const current = readPendingEscrow();
+  if (!current) return;
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ ...current, ...patch }));
+  } catch {
+    // ignore
+  }
+}
+
+export async function createPayload(txjson: Record<string, unknown>): Promise<XummPayloadCreateResponse> {
   const res = await fetch('/api/xumm/create-payload', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -122,7 +137,7 @@ async function createPayload(txjson: Record<string, unknown>): Promise<XummPaylo
   return data as XummPayloadCreateResponse;
 }
 
-async function getPayload(uuid: string): Promise<XummPayloadStatus> {
+export async function getPayload(uuid: string): Promise<XummPayloadStatus> {
   const res = await fetch(`/api/xumm/get-payload?uuid=${encodeURIComponent(uuid)}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data?.error) {
@@ -139,7 +154,7 @@ async function getPayload(uuid: string): Promise<XummPayloadStatus> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function waitForSignature(uuid: string): Promise<XummPayloadStatus> {
+export async function waitForSignature(uuid: string): Promise<XummPayloadStatus> {
   // Background tabs throttle setTimeout to ~1/min or suspend it entirely
   // (mobile app-switch to Xaman). Re-check immediately when the tab wakes.
   let wakeNow: (() => void) | null = null;
@@ -347,30 +362,38 @@ export async function createEscrowViaXaman(params: {
 
   window.open(deepLink, '_blank');
 
-  try {
-    const status = await waitForSignature(payload.uuid);
-    return await finishSignedPayload(status, sellerAddress, amountXrp, network);
-  } finally {
+  const status = await waitForSignature(payload.uuid);
+  if (!status.meta?.signed) {
+    // Resolved unsigned (declined/cancelled/expired) — nothing to recover.
     clearPendingEscrow();
   }
+  const result = await finishSignedPayload(status, sellerAddress, amountXrp, network);
+  // Same tick as on-chain verification: the hash is durable locally even if
+  // the tab dies before the DB write lands. Cleared by the caller after a
+  // successful insert — never here.
+  updatePendingEscrow({ result });
+  return result;
 }
 
 /**
- * Resume a Xaman sign that survived a tab reload. Returns the verified on-chain
- * escrow result, or null when there is nothing pending to resume.
- * Throws with a user-facing message when the payload resolved unsigned/failed.
+ * Resume a Xaman sign that survived a tab reload. If the chain result was
+ * already verified, returns it from storage without touching Xaman — so the
+ * caller can re-attempt the DB write on every mount. Throws with a
+ * user-facing message when the payload resolved unsigned/failed.
  */
 export async function resumePendingEscrow(): Promise<XamanEscrowResult | null> {
   const pending = readPendingEscrow();
   if (!pending) return null;
+  if (pending.result?.txHash) return pending.result;
 
   const network = NETWORKS[escrowNetwork()];
-  try {
-    const status = await waitForSignature(pending.uuid);
-    return await finishSignedPayload(status, pending.sellerAddress, null, network);
-  } finally {
+  const status = await waitForSignature(pending.uuid);
+  if (!status.meta?.signed) {
     clearPendingEscrow();
   }
+  const result = await finishSignedPayload(status, pending.sellerAddress, null, network);
+  updatePendingEscrow({ result });
+  return result;
 }
 
 async function finishSignedPayload(
@@ -420,6 +443,7 @@ export interface PendingXamanFinish {
   ownerAddress: string;
   offerSequence: number;
   createdAt: number;
+  result?: XamanFinishResult;
 }
 
 export interface XamanFinishResult {
@@ -456,6 +480,16 @@ export function readPendingFinish(): PendingXamanFinish | null {
 export function clearPendingFinish(): void {
   try {
     localStorage.removeItem(PENDING_FINISH_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function updatePendingFinish(patch: Partial<PendingXamanFinish>): void {
+  const current = readPendingFinish();
+  if (!current) return;
+  try {
+    localStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ ...current, ...patch }));
   } catch {
     // ignore
   }
@@ -504,29 +538,34 @@ export async function finishEscrowViaXaman(params: {
   savePendingFinish({ uuid: payload.uuid, escrowId, ownerAddress, offerSequence });
   window.open(deepLink, '_blank');
 
-  try {
-    const status = await waitForSignature(payload.uuid);
-    return await finishSignedFinish(status, params, network);
-  } finally {
+  const status = await waitForSignature(payload.uuid);
+  if (!status.meta?.signed) {
     clearPendingFinish();
   }
+  const result = await finishSignedFinish(status, params, network);
+  updatePendingFinish({ result });
+  return result;
 }
 
 /**
- * Resume a pending EscrowFinish signature after a mobile tab reload.
+ * Resume a pending EscrowFinish signature after a mobile tab reload. A
+ * verified result is replayed from storage — the caller's DB write can be
+ * re-attempted on every mount without involving Xaman again.
  * Returns null when there is no pending finish for the given escrow.
  */
 export async function resumePendingFinish(escrowId: string): Promise<XamanFinishResult | null> {
   const pending = readPendingFinish();
   if (!pending || pending.escrowId !== escrowId) return null;
+  if (pending.result?.txHash) return pending.result;
 
   const network = NETWORKS[escrowNetwork()];
-  try {
-    const status = await waitForSignature(pending.uuid);
-    return await finishSignedFinish(status, pending, network);
-  } finally {
+  const status = await waitForSignature(pending.uuid);
+  if (!status.meta?.signed) {
     clearPendingFinish();
   }
+  const result = await finishSignedFinish(status, pending, network);
+  updatePendingFinish({ result });
+  return result;
 }
 
 async function finishSignedFinish(
@@ -558,4 +597,47 @@ async function finishSignedFinish(
     offerSequence: params.offerSequence,
     explorerUrl: `${network.explorer}/transactions/${txHash}`,
   };
+}
+
+// ---------------------------------------------------------------------------
+// SignIn — Connect Wallet uses the same resume semantics. No funds move, but
+// a killed tab still loses an in-flight sign-in without this.
+// ---------------------------------------------------------------------------
+
+const PENDING_SIGNIN_KEY = 'luxledger_pending_xaman_signin';
+
+export interface PendingXamanSignIn {
+  uuid: string;
+  createdAt: number;
+}
+
+export function savePendingSignIn(uuid: string): void {
+  try {
+    localStorage.setItem(PENDING_SIGNIN_KEY, JSON.stringify({ uuid, createdAt: Date.now() }));
+  } catch {
+    // ignore
+  }
+}
+
+export function readPendingSignIn(): PendingXamanSignIn | null {
+  try {
+    const raw = localStorage.getItem(PENDING_SIGNIN_KEY);
+    if (!raw) return null;
+    const pending = JSON.parse(raw) as PendingXamanSignIn;
+    if (!pending?.uuid || Date.now() - pending.createdAt > PENDING_TTL_MS) {
+      localStorage.removeItem(PENDING_SIGNIN_KEY);
+      return null;
+    }
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingSignIn(): void {
+  try {
+    localStorage.removeItem(PENDING_SIGNIN_KEY);
+  } catch {
+    // ignore
+  }
 }

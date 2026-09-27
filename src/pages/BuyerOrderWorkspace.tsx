@@ -43,6 +43,7 @@ import {
   finishEscrowViaXaman,
   readPendingFinish,
   resumePendingFinish,
+  clearPendingFinish,
   escrowNetwork,
 } from '@/lib/escrow/xaman-escrow';
 import type { XamanFinishResult } from '@/lib/escrow/xaman-escrow';
@@ -334,8 +335,6 @@ export default function BuyerOrderWorkspace() {
         .eq('escrow_finish_tx_hash', result.txHash)
         .maybeSingle();
       if (lookupError) {
-        // Column missing on prod — fall through to the plain update; the ALTER
-        // below is required for dedupe to work.
         // eslint-disable-next-line no-console
         console.error('[BuyerOrderWorkspace] finish hash lookup', lookupError);
       }
@@ -348,10 +347,13 @@ export default function BuyerOrderWorkspace() {
           toast.error(
             `On-chain release finished (tx ${result.txHash}) but could not be recorded: ${updateError.message}`
           );
+          // Pending entry (with the verified chain result) is intentionally
+          // kept — the next mount retries the write automatically.
           await fetchAll();
           return;
         }
       }
+      clearPendingFinish();
       toast.success(`Escrow settled on-chain. Tx: ${result.txHash}`);
       await fetchAll();
     },

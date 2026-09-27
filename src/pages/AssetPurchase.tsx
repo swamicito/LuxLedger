@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase-client';
 import { EscrowCheckout } from '../modules/escrow/components/EscrowCheckout';
 import { EscrowToggle } from '../modules/escrow/components/EscrowToggle';
 import { multichainAdapter } from '../modules/escrow/lib/multichain-adapter';
-import { readPendingEscrow, resumePendingEscrow } from '@/lib/escrow/xaman-escrow';
+import { readPendingEscrow, resumePendingEscrow, clearPendingEscrow } from '@/lib/escrow/xaman-escrow';
 import { subscriptionManager } from '../modules/escrow/lib/subscription-model';
 import { 
   ArrowLeft,
@@ -145,6 +145,8 @@ export default function AssetPurchase() {
       });
     }
     if (existing?.id) {
+      // Hash already recorded — the pending payload has served its purpose.
+      clearPendingEscrow();
       return existing.id;
     }
 
@@ -209,9 +211,12 @@ export default function AssetPurchase() {
         }`,
         { duration: 12000 }
       );
+      // Pending entry (with the verified chain result) is intentionally kept —
+      // the next mount of this page retries the insert automatically.
       return null;
     }
 
+    clearPendingEscrow();
     trackEvent('escrow_created', {
       escrow_id: escrowRow.id,
       chain_escrow_id: escrowResult.escrowId ?? escrowResult.txHash,
