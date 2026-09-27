@@ -40,6 +40,7 @@ export interface UnifiedEscrowResult {
   status: 'pending' | 'confirmed' | 'failed';
   escrowSequence?: number;
   buyerAddress?: string;
+  sellerAddress?: string;
   amountXrp?: number;
 }
 
@@ -134,6 +135,7 @@ export class MultichainEscrowAdapter {
       status: 'confirmed',
       escrowSequence: result.escrowSequence,
       buyerAddress: result.buyerAddress,
+      sellerAddress: result.sellerAddress,
       amountXrp: result.amountXrp,
     };
   }
