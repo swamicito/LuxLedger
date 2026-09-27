@@ -141,20 +141,34 @@ export default function AssetPurchase() {
       if (useEscrow) {
         // Resolve wallet addresses first: the seller must be able to receive
         // XRP, and the buyer's real address comes back from the Xaman signer.
-        const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
+        // profiles RLS is own-row only, so the seller's wallet comes through
+        // the SECURITY DEFINER RPC (returns wallet_address for user_id only).
+        const sellerWalletRpc = supabase.rpc as unknown as (
+          fn: string,
+          args: Record<string, unknown>
+        ) => Promise<{ data: unknown; error: { message?: string; code?: string } | null }>;
+
+        const [{ data: buyerProfile }, sellerWalletResult] = await Promise.all([
           supabase
             .from('profiles')
             .select('wallet_address')
             .eq('user_id', user.id)
             .maybeSingle(),
-          supabase
+          sellerWalletRpc('get_seller_wallet_address', { p_user_id: asset.owner_id }),
+        ]);
+
+        let sellerWallet = '';
+        if (!sellerWalletResult.error && typeof sellerWalletResult.data === 'string') {
+          sellerWallet = sellerWalletResult.data;
+        } else {
+          // Fallback if the RPC isn't deployed yet (works when RLS allows, e.g. admin).
+          const { data: sellerProfile } = await supabase
             .from('profiles')
             .select('wallet_address')
             .eq('user_id', asset.owner_id)
-            .maybeSingle(),
-        ]);
-
-        const sellerWallet = sellerProfile?.wallet_address ?? '';
+            .maybeSingle();
+          sellerWallet = sellerProfile?.wallet_address ?? '';
+        }
         if (!/^r[1-9A-HJ-NP-Za-km-z]{24,33}$/.test(sellerWallet)) {
           toast.error(
             'This seller cannot receive escrow payments yet — no XRPL wallet on file.',
