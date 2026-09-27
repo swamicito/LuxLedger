@@ -175,6 +175,24 @@ async function waitForSignature(uuid: string): Promise<XummPayloadStatus> {
   }
 }
 
+interface LedgerTx {
+  validated?: boolean;
+  status?: string;
+  TransactionType?: string;
+  Account?: string;
+  Destination?: string;
+  Sequence?: number;
+  Amount?: string | { value?: string };
+  meta?: {
+    TransactionResult?: string;
+    AffectedNodes?: Array<{
+      DeletedNode?: { LedgerEntryType?: string };
+      CreatedNode?: { LedgerEntryType?: string };
+      ModifiedNode?: { LedgerEntryType?: string };
+    }>;
+  };
+}
+
 interface VerifiedEscrowTx {
   account: string;
   sequence: number;
@@ -182,22 +200,7 @@ interface VerifiedEscrowTx {
   destination: string;
 }
 
-async function verifyEscrowCreateOnChain(txHash: string): Promise<VerifiedEscrowTx> {
-  const { jsonRpc } = NETWORKS[escrowNetwork()];
-  // A freshly-signed tx can take a ledger close or two to validate.
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      return await fetchAndVerifyTx(jsonRpc, txHash);
-    } catch (error) {
-      lastError = error as Error;
-      await sleep(2000);
-    }
-  }
-  throw lastError ?? new Error('Could not verify the escrow transaction on-chain.');
-}
-
-async function fetchAndVerifyTx(jsonRpc: string, txHash: string): Promise<VerifiedEscrowTx> {
+async function fetchValidatedTx(jsonRpc: string, txHash: string): Promise<LedgerTx> {
   const res = await fetch(jsonRpc, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -207,7 +210,7 @@ async function fetchAndVerifyTx(jsonRpc: string, txHash: string): Promise<Verifi
     }),
   });
   const data = await res.json().catch(() => ({}));
-  const tx = data?.result;
+  const tx = data?.result as LedgerTx | undefined;
   if (!res.ok || tx?.status !== 'success') {
     throw new Error('Could not fetch the signed transaction from the ledger.');
   }
@@ -215,21 +218,62 @@ async function fetchAndVerifyTx(jsonRpc: string, txHash: string): Promise<Verifi
     throw new Error('Escrow transaction is not validated on the ledger yet. Try again in a few seconds.');
   }
   if (tx.meta?.TransactionResult !== 'tesSUCCESS') {
-    throw new Error(`EscrowCreate failed on-chain: ${tx.meta?.TransactionResult ?? 'unknown'}`);
+    throw new Error(`Escrow transaction failed on-chain: ${tx.meta?.TransactionResult ?? 'unknown'}`);
   }
-  if (tx.TransactionType !== 'EscrowCreate') {
-    throw new Error('Signed transaction was not an EscrowCreate.');
+  return tx;
+}
+
+async function verifyEscrowCreateOnChain(txHash: string): Promise<VerifiedEscrowTx> {
+  const { jsonRpc } = NETWORKS[escrowNetwork()];
+  // A freshly-signed tx can take a ledger close or two to validate.
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const tx = await fetchValidatedTx(jsonRpc, txHash);
+      if (tx.TransactionType !== 'EscrowCreate') {
+        throw new Error('Signed transaction was not an EscrowCreate.');
+      }
+      const sequence = Number(tx.Sequence);
+      if (!Number.isInteger(sequence)) {
+        throw new Error('Ledger response did not include the escrow sequence.');
+      }
+      return {
+        account: tx.Account ?? '',
+        sequence,
+        amountDrops: typeof tx.Amount === 'string' ? tx.Amount : '0',
+        destination: tx.Destination ?? '',
+      };
+    } catch (error) {
+      lastError = error as Error;
+      await sleep(2000);
+    }
   }
-  const sequence = Number(tx.Sequence);
-  if (!Number.isInteger(sequence)) {
-    throw new Error('Ledger response did not include the escrow sequence.');
+  throw lastError ?? new Error('Could not verify the escrow transaction on-chain.');
+}
+
+async function verifyEscrowFinishOnChain(txHash: string): Promise<LedgerTx> {
+  const { jsonRpc } = NETWORKS[escrowNetwork()];
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const tx = await fetchValidatedTx(jsonRpc, txHash);
+      if (tx.TransactionType !== 'EscrowFinish') {
+        throw new Error('Signed transaction was not an EscrowFinish.');
+      }
+      // A real finish deletes the Escrow ledger object.
+      const deletedEscrow = (tx.meta?.AffectedNodes ?? []).some(
+        (n) => n.DeletedNode?.LedgerEntryType === 'Escrow'
+      );
+      if (!deletedEscrow) {
+        throw new Error('EscrowFinish validated but no escrow object was finished.');
+      }
+      return tx;
+    } catch (error) {
+      lastError = error as Error;
+      await sleep(2000);
+    }
   }
-  return {
-    account: tx.Account,
-    sequence,
-    amountDrops: typeof tx.Amount === 'string' ? tx.Amount : '0',
-    destination: tx.Destination ?? '',
-  };
+  throw lastError ?? new Error('Could not verify the EscrowFinish transaction on-chain.');
 }
 
 function toHex(value: string): string {
@@ -358,6 +402,160 @@ async function finishSignedPayload(
     txHash,
     escrowSequence: onChain.sequence,
     amountXrp: Number(onChain.amountDrops) / 1_000_000 || amountXrp || 0,
+    explorerUrl: `${network.explorer}/transactions/${txHash}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// EscrowFinish — called after evaluate_escrow_release marks the row released.
+// Any account may submit a time-held EscrowFinish (FinishAfter already elapsed);
+// Account is omitted so Xaman fills it with whoever signs (buyer or seller).
+// ---------------------------------------------------------------------------
+
+const PENDING_FINISH_KEY = 'luxledger_pending_xaman_finish';
+
+export interface PendingXamanFinish {
+  uuid: string;
+  escrowId: string;
+  ownerAddress: string;
+  offerSequence: number;
+  createdAt: number;
+}
+
+export interface XamanFinishResult {
+  txHash: string;
+  signerAddress: string;
+  ownerAddress: string;
+  offerSequence: number;
+  explorerUrl: string;
+}
+
+export function savePendingFinish(pending: Omit<PendingXamanFinish, 'createdAt'>): void {
+  try {
+    localStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ ...pending, createdAt: Date.now() }));
+  } catch {
+    // storage unavailable — flow still works while the tab stays alive
+  }
+}
+
+export function readPendingFinish(): PendingXamanFinish | null {
+  try {
+    const raw = localStorage.getItem(PENDING_FINISH_KEY);
+    if (!raw) return null;
+    const pending = JSON.parse(raw) as PendingXamanFinish;
+    if (!pending?.uuid || Date.now() - pending.createdAt > PENDING_TTL_MS) {
+      localStorage.removeItem(PENDING_FINISH_KEY);
+      return null;
+    }
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingFinish(): void {
+  try {
+    localStorage.removeItem(PENDING_FINISH_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Submit a real EscrowFinish via a Xaman payload. Throws on any failure —
+ * callers must surface the message and must not mark the escrow finished.
+ */
+export async function finishEscrowViaXaman(params: {
+  escrowId: string;
+  ownerAddress: string;
+  offerSequence: number;
+}): Promise<XamanFinishResult> {
+  const { escrowId, ownerAddress, offerSequence } = params;
+  const network = NETWORKS[escrowNetwork()];
+
+  if (!XRPL_ADDRESS_RE.test(ownerAddress)) {
+    throw new Error('Missing the XRPL owner address that created the escrow.');
+  }
+  if (!Number.isInteger(offerSequence)) {
+    throw new Error('Missing the on-chain escrow sequence.');
+  }
+
+  const txjson: Record<string, unknown> = {
+    TransactionType: 'EscrowFinish',
+    // Account intentionally omitted — Xaman sets it to the signing account.
+    Owner: ownerAddress,
+    OfferSequence: offerSequence,
+    Memos: [
+      {
+        Memo: {
+          MemoType: toHex('luxledger/escrow-finish'),
+          MemoData: toHex(JSON.stringify({ escrowId })),
+        },
+      },
+    ],
+  };
+
+  const payload = await createPayload(txjson);
+  const deepLink = payload.next?.always;
+  if (!deepLink) {
+    throw new Error('Xaman did not return a signing link.');
+  }
+
+  savePendingFinish({ uuid: payload.uuid, escrowId, ownerAddress, offerSequence });
+  window.open(deepLink, '_blank');
+
+  try {
+    const status = await waitForSignature(payload.uuid);
+    return await finishSignedFinish(status, params, network);
+  } finally {
+    clearPendingFinish();
+  }
+}
+
+/**
+ * Resume a pending EscrowFinish signature after a mobile tab reload.
+ * Returns null when there is no pending finish for the given escrow.
+ */
+export async function resumePendingFinish(escrowId: string): Promise<XamanFinishResult | null> {
+  const pending = readPendingFinish();
+  if (!pending || pending.escrowId !== escrowId) return null;
+
+  const network = NETWORKS[escrowNetwork()];
+  try {
+    const status = await waitForSignature(pending.uuid);
+    return await finishSignedFinish(status, pending, network);
+  } finally {
+    clearPendingFinish();
+  }
+}
+
+async function finishSignedFinish(
+  status: XummPayloadStatus,
+  params: { escrowId: string; ownerAddress: string; offerSequence: number },
+  network: (typeof NETWORKS)[NetworkName]
+): Promise<XamanFinishResult> {
+  if (!status.meta?.signed || !status.response?.txid) {
+    // eslint-disable-next-line no-console
+    console.error('[xaman-escrow] finish payload resolved unsigned', {
+      meta: status.meta,
+      hasTxid: Boolean(status.response?.txid),
+      dispatched_result: status.response?.dispatched_result,
+    });
+    throw new Error(
+      status.response?.dispatched_result
+        ? `EscrowFinish failed on-chain: ${status.response.dispatched_result}`
+        : 'EscrowFinish signing was declined or expired in Xaman.'
+    );
+  }
+
+  const txHash = status.response.txid;
+  const tx = await verifyEscrowFinishOnChain(txHash);
+
+  return {
+    txHash,
+    signerAddress: tx.Account || status.response?.account || '',
+    ownerAddress: params.ownerAddress,
+    offerSequence: params.offerSequence,
     explorerUrl: `${network.explorer}/transactions/${txHash}`,
   };
 }

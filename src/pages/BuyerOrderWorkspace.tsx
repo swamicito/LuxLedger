@@ -39,6 +39,13 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase-client';
 import EscrowStatusCard from '@/components/EscrowStatusCard';
+import {
+  finishEscrowViaXaman,
+  readPendingFinish,
+  resumePendingFinish,
+  escrowNetwork,
+} from '@/lib/escrow/xaman-escrow';
+import type { XamanFinishResult } from '@/lib/escrow/xaman-escrow';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -68,6 +75,8 @@ interface EscrowRow {
   dispute_filed_at: string | null;
   released_at: string | null;
   release_reason: string | null;
+  escrow_sequence: number | null;
+  escrow_finish_tx_hash: string | null;
   created_at: string;
   funded_at: string | null;
   updated_at: string;
@@ -217,7 +226,7 @@ export default function BuyerOrderWorkspace() {
     const { data, error: rowError } = await supabase
       .from('escrow_transactions')
       .select(
-        'id, asset_id, buyer_id, seller_id, buyer_address, seller_address, amount_usd, status, escrow_status, carrier, tracking_number, shipped_at, delivered_at, tracking_delivered, tracking_delivered_at, buyer_confirmed, buyer_confirmed_at, dispute_active, dispute_window_expired, dispute_filed_at, released_at, release_reason, created_at, funded_at, updated_at'
+        'id, asset_id, buyer_id, seller_id, buyer_address, seller_address, amount_usd, status, escrow_status, carrier, tracking_number, shipped_at, delivered_at, tracking_delivered, tracking_delivered_at, buyer_confirmed, buyer_confirmed_at, dispute_active, dispute_window_expired, dispute_filed_at, released_at, release_reason, escrow_sequence, escrow_finish_tx_hash, created_at, funded_at, updated_at'
       )
       .eq('id', escrowId)
       .maybeSingle();
@@ -313,6 +322,95 @@ export default function BuyerOrderWorkspace() {
   // Actions
   // -------------------------------------------------------------------------
 
+  const [finishing, setFinishing] = useState(false);
+
+  // Persist the EscrowFinish hash. Dedupe first so a reloaded page or a second
+  // click cannot overwrite/double-write a recorded finish.
+  const recordFinish = useCallback(
+    async (result: XamanFinishResult) => {
+      const { data: existing, error: lookupError } = await supabase
+        .from('escrow_transactions')
+        .select('id')
+        .eq('escrow_finish_tx_hash', result.txHash)
+        .maybeSingle();
+      if (lookupError) {
+        // Column missing on prod — fall through to the plain update; the ALTER
+        // below is required for dedupe to work.
+        // eslint-disable-next-line no-console
+        console.error('[BuyerOrderWorkspace] finish hash lookup', lookupError);
+      }
+      if (!existing) {
+        const { error: updateError } = await supabase
+          .from('escrow_transactions')
+          .update({ escrow_finish_tx_hash: result.txHash })
+          .eq('id', escrowId!);
+        if (updateError) {
+          toast.error(
+            `On-chain release finished (tx ${result.txHash}) but could not be recorded: ${updateError.message}`
+          );
+          await fetchAll();
+          return;
+        }
+      }
+      toast.success(`Escrow settled on-chain. Tx: ${result.txHash}`);
+      await fetchAll();
+    },
+    [escrowId, fetchAll]
+  );
+
+  const finishOnChain = useCallback(
+    async (row: EscrowRow) => {
+      if (!row.escrow_sequence || !row.buyer_address) {
+        toast.error(
+          'Missing on-chain escrow coordinates (sequence or owner address) — cannot finish on XRPL.'
+        );
+        return;
+      }
+      if (row.escrow_finish_tx_hash) {
+        toast.success('Escrow is already settled on-chain.');
+        return;
+      }
+      setFinishing(true);
+      try {
+        const result = await finishEscrowViaXaman({
+          escrowId: row.id,
+          ownerAddress: row.buyer_address,
+          offerSequence: row.escrow_sequence,
+        });
+        await recordFinish(result);
+      } catch (error) {
+        // Never hide a chain failure — show the real message.
+        toast.error(
+          error instanceof Error ? error.message : 'EscrowFinish failed.'
+        );
+        await fetchAll();
+      } finally {
+        setFinishing(false);
+      }
+    },
+    [recordFinish, fetchAll]
+  );
+
+  // Resume a finish signature that survived a mobile tab reload.
+  useEffect(() => {
+    const pending = readPendingFinish();
+    if (!pending || !escrowId || pending.escrowId !== escrowId) return;
+    (async () => {
+      setFinishing(true);
+      toast.info('Finishing your on-chain release…');
+      try {
+        const result = await resumePendingFinish(escrowId);
+        if (result) await recordFinish(result);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'EscrowFinish failed.'
+        );
+      } finally {
+        setFinishing(false);
+      }
+    })();
+  }, [escrowId, recordFinish]);
+
   const confirmReceipt = useCallback(async () => {
     if (!escrow) return;
     if (!escrow.tracking_delivered) {
@@ -345,9 +443,28 @@ export default function BuyerOrderWorkspace() {
       console.error('[BuyerOrderWorkspace] evaluate_escrow_release', rpcError);
     }
     toast.success('Receipt confirmed. Release is being processed.');
+
+    // If the RPC released the escrow, settle it on-chain: the buyer signs the
+    // EscrowFinish (Owner + OfferSequence) in Xaman. Refresh first so
+    // finishOnChain reads the post-RPC row.
     await fetchAll();
+    const { data: fresh } = await supabase
+      .from('escrow_transactions')
+      .select('id, escrow_status, escrow_sequence, escrow_finish_tx_hash, buyer_address')
+      .eq('id', escrow.id)
+      .maybeSingle();
+    if (
+      fresh &&
+      fresh.escrow_status === 'released' &&
+      !fresh.escrow_finish_tx_hash &&
+      fresh.escrow_sequence
+    ) {
+      toast.info('Release approved — sign the settlement in Xaman.');
+      await finishOnChain({ ...escrow, ...(fresh as Partial<EscrowRow>) });
+    }
+
     setActing(false);
-  }, [escrow, fetchAll]);
+  }, [escrow, fetchAll, finishOnChain]);
 
   const goToDispute = useCallback(() => {
     if (!escrow) return;
@@ -573,6 +690,41 @@ export default function BuyerOrderWorkspace() {
                     <p className="mt-2 text-xs text-emerald-300/80">
                       Funds released {formatDateTime(escrow.released_at)}.
                     </p>
+                    {escrow.escrow_finish_tx_hash ? (
+                      <a
+                        href={`https://${escrowNetwork() === 'testnet' ? 'testnet.xrpl.org' : 'livenet.xrpl.org'}/transactions/${escrow.escrow_finish_tx_hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1 text-xs text-emerald-300 hover:text-emerald-200"
+                      >
+                        Settled on-chain · view EscrowFinish
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : escrow.escrow_sequence ? (
+                      <>
+                        <p className="mt-3 text-[0.7rem] text-emerald-300/70">
+                          One more step — sign the EscrowFinish in Xaman to
+                          move the XRP to the seller on-chain.
+                        </p>
+                        <Button
+                          className="mt-3 w-full bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#B68E2A]"
+                          onClick={() => finishOnChain(escrow)}
+                          disabled={finishing}
+                        >
+                          {finishing ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                          )}
+                          Finish escrow on ledger
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="mt-3 text-[0.7rem] text-muted-foreground">
+                        Legacy escrow without on-chain coordinates — settlement
+                        is recorded off-chain only.
+                      </p>
+                    )}
                     <Button
                       variant="outline"
                       className="mt-4 w-full"
