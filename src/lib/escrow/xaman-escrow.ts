@@ -56,6 +56,52 @@ const XRPL_ADDRESS_RE = /^r[1-9A-HJ-NP-Za-km-z]{24,33}$/;
 const SIGN_TIMEOUT_MS = 5 * 60 * 1000;
 const POLL_INTERVAL_MS = 3000;
 
+// A pending payload survives an app-switch reload: on mobile the page can be
+// fully reloaded when the user returns from Xaman, destroying the async chain.
+// Persisting the uuid lets the purchase page resume and still write the row.
+const PENDING_KEY = 'luxledger_pending_xaman_escrow';
+const PENDING_TTL_MS = 30 * 60 * 1000;
+
+export interface PendingXamanEscrow {
+  uuid: string;
+  assetId: string;
+  buyerUserId: string;
+  sellerAddress: string;
+  amountUsd: number;
+  createdAt: number;
+}
+
+export function savePendingEscrow(pending: Omit<PendingXamanEscrow, 'createdAt'>): void {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ ...pending, createdAt: Date.now() }));
+  } catch {
+    // storage unavailable — flow still works while the tab stays alive
+  }
+}
+
+export function readPendingEscrow(): PendingXamanEscrow | null {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const pending = JSON.parse(raw) as PendingXamanEscrow;
+    if (!pending?.uuid || Date.now() - pending.createdAt > PENDING_TTL_MS) {
+      localStorage.removeItem(PENDING_KEY);
+      return null;
+    }
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingEscrow(): void {
+  try {
+    localStorage.removeItem(PENDING_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 async function createPayload(txjson: Record<string, unknown>): Promise<XummPayloadCreateResponse> {
   const res = await fetch('/api/xumm/create-payload', {
     method: 'POST',
@@ -94,15 +140,39 @@ async function getPayload(uuid: string): Promise<XummPayloadStatus> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function waitForSignature(uuid: string): Promise<XummPayloadStatus> {
-  const deadline = Date.now() + SIGN_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const status = await getPayload(uuid);
-    if (status.meta?.resolved) {
-      return status;
+  // Background tabs throttle setTimeout to ~1/min or suspend it entirely
+  // (mobile app-switch to Xaman). Re-check immediately when the tab wakes.
+  let wakeNow: (() => void) | null = null;
+  const onWake = () => {
+    wakeNow?.();
+  };
+  document.addEventListener('visibilitychange', onWake);
+  window.addEventListener('focus', onWake);
+
+  try {
+    const deadline = Date.now() + SIGN_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      const status = await getPayload(uuid);
+      if (status.meta?.resolved) {
+        return status;
+      }
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(() => {
+          wakeNow = null;
+          resolve();
+        }, POLL_INTERVAL_MS);
+        wakeNow = () => {
+          clearTimeout(timer);
+          wakeNow = null;
+          resolve();
+        };
+      });
     }
-    await sleep(POLL_INTERVAL_MS);
+    throw new Error('Signing request timed out — no response from Xaman.');
+  } finally {
+    document.removeEventListener('visibilitychange', onWake);
+    window.removeEventListener('focus', onWake);
   }
-  throw new Error('Signing request timed out — no response from Xaman.');
 }
 
 interface VerifiedEscrowTx {
@@ -114,6 +184,20 @@ interface VerifiedEscrowTx {
 
 async function verifyEscrowCreateOnChain(txHash: string): Promise<VerifiedEscrowTx> {
   const { jsonRpc } = NETWORKS[escrowNetwork()];
+  // A freshly-signed tx can take a ledger close or two to validate.
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await fetchAndVerifyTx(jsonRpc, txHash);
+    } catch (error) {
+      lastError = error as Error;
+      await sleep(2000);
+    }
+  }
+  throw lastError ?? new Error('Could not verify the escrow transaction on-chain.');
+}
+
+async function fetchAndVerifyTx(jsonRpc: string, txHash: string): Promise<VerifiedEscrowTx> {
   const res = await fetch(jsonRpc, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -207,9 +291,50 @@ export async function createEscrowViaXaman(params: {
     throw new Error('Xaman did not return a signing link.');
   }
 
+  // Persist before the app-switch: if the tab reloads in the background the
+  // purchase page can resume from this uuid instead of creating a second escrow.
+  savePendingEscrow({
+    uuid: payload.uuid,
+    assetId,
+    buyerUserId,
+    sellerAddress,
+    amountUsd,
+  });
+
   window.open(deepLink, '_blank');
 
-  const status = await waitForSignature(payload.uuid);
+  try {
+    const status = await waitForSignature(payload.uuid);
+    return await finishSignedPayload(status, sellerAddress, amountXrp, network);
+  } finally {
+    clearPendingEscrow();
+  }
+}
+
+/**
+ * Resume a Xaman sign that survived a tab reload. Returns the verified on-chain
+ * escrow result, or null when there is nothing pending to resume.
+ * Throws with a user-facing message when the payload resolved unsigned/failed.
+ */
+export async function resumePendingEscrow(): Promise<XamanEscrowResult | null> {
+  const pending = readPendingEscrow();
+  if (!pending) return null;
+
+  const network = NETWORKS[escrowNetwork()];
+  try {
+    const status = await waitForSignature(pending.uuid);
+    return await finishSignedPayload(status, pending.sellerAddress, null, network);
+  } finally {
+    clearPendingEscrow();
+  }
+}
+
+async function finishSignedPayload(
+  status: XummPayloadStatus,
+  sellerAddress: string,
+  amountXrp: number | null,
+  network: (typeof NETWORKS)[NetworkName]
+): Promise<XamanEscrowResult> {
   if (!status.meta?.signed || !status.response?.txid) {
     // eslint-disable-next-line no-console
     console.error('[xaman-escrow] payload resolved unsigned', {
@@ -232,7 +357,7 @@ export async function createEscrowViaXaman(params: {
     sellerAddress: onChain.destination || sellerAddress,
     txHash,
     escrowSequence: onChain.sequence,
-    amountXrp: Number(onChain.amountDrops) / 1_000_000 || amountXrp,
+    amountXrp: Number(onChain.amountDrops) / 1_000_000 || amountXrp || 0,
     explorerUrl: `${network.explorer}/transactions/${txHash}`,
   };
 }

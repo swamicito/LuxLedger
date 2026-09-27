@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase-client';
 import { EscrowCheckout } from '../modules/escrow/components/EscrowCheckout';
 import { EscrowToggle } from '../modules/escrow/components/EscrowToggle';
 import { multichainAdapter } from '../modules/escrow/lib/multichain-adapter';
+import { readPendingEscrow, resumePendingEscrow } from '@/lib/escrow/xaman-escrow';
 import { subscriptionManager } from '../modules/escrow/lib/subscription-model';
 import { 
   ArrowLeft,
@@ -72,6 +73,153 @@ export default function AssetPurchase() {
       trackEvent('asset_purchase_view', { asset_id: id });
     }
   }, [id]);
+
+  // If the tab was reloaded while the user signed in Xaman, the pending payload
+  // survives in localStorage. Resume it: finish the sign poll, verify on-chain,
+  // write escrow_transactions, and continue to /order/:id.
+  useEffect(() => {
+    if (!asset || !user) return;
+    const pending = readPendingEscrow();
+    if (!pending || pending.assetId !== asset.id || pending.buyerUserId !== user.id) return;
+
+    let cancelled = false;
+    (async () => {
+      setPurchaseStep('processing');
+      toast.info('Finishing your escrow — checking the Xaman signature…');
+      try {
+        const escrowResult = await resumePendingEscrow();
+        if (cancelled) return;
+        if (!escrowResult) {
+          setPurchaseStep('details');
+          return;
+        }
+        const rowId = await recordEscrowResult(escrowResult);
+        if (cancelled) return;
+        if (!rowId) {
+          setPurchaseStep('details');
+          return;
+        }
+        toast.success('Escrow created. Tracking your order…');
+        setCreatedEscrowId(rowId);
+        setPurchaseStep('complete');
+        navigate(`/order/${rowId}`);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Escrow resume failed:', error);
+        if (cancelled) return;
+        toast.error(
+          error instanceof Error ? error.message : 'Could not finish the escrow. Please try again.',
+          { duration: 8000 }
+        );
+        setPurchaseStep('details');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [asset, user]);
+
+  // Persist a validated on-chain escrow exactly once. Dedupes on
+  // escrow_create_tx_hash so a resumed purchase never inserts twice.
+  const recordEscrowResult = async (escrowResult: {
+    txHash: string;
+    escrowId?: string;
+    escrowSequence?: number;
+    buyerAddress?: string;
+    sellerAddress?: string;
+    amountXrp?: number;
+  }): Promise<string | null> => {
+    if (!asset || !user) return null;
+
+    const { data: existing, error: dedupeError } = await (supabase
+      .from('escrow_transactions') as any)
+      .select('id')
+      .eq('escrow_create_tx_hash', escrowResult.txHash)
+      .maybeSingle();
+    if (dedupeError) {
+      // Column may not exist yet — log and continue; insert still proceeds.
+      // eslint-disable-next-line no-console
+      console.error('escrow_transactions dedupe lookup failed', {
+        code: dedupeError.code,
+        message: dedupeError.message,
+      });
+    }
+    if (existing?.id) {
+      return existing.id;
+    }
+
+    const nowIso = new Date().toISOString();
+    const insertPayload = {
+      buyer_id: user.id,
+      seller_id: asset.owner_id,
+      asset_id: asset.id,
+      amount_usd: asset.estimated_value,
+      amount_xrp: escrowResult.amountXrp ?? null,
+      platform_fee_usd: Number((asset.estimated_value * 0.025).toFixed(2)),
+      buyer_address: escrowResult.buyerAddress || `pending:${user.id}`,
+      seller_address: escrowResult.sellerAddress || `pending:${asset.owner_id}`,
+      escrow_sequence: escrowResult.escrowSequence ?? null,
+      escrow_create_tx_hash: escrowResult.txHash,
+      status: 'funded',
+      escrow_status: 'held',
+      funded_at: nowIso,
+      created_at: nowIso,
+    };
+
+    let escrowRow: { id: string } | null = null;
+    let insertError: { code?: string; message?: string; details?: string; hint?: string } | null = null;
+
+    const firstAttempt = await supabase
+      .from('escrow_transactions')
+      .insert(insertPayload)
+      .select('id')
+      .single();
+    escrowRow = firstAttempt.data;
+    insertError = firstAttempt.error;
+
+    // If production hasn't added escrow_create_tx_hash yet, retry without
+    // it so the purchase still records (the chain refs stay in the toast/log).
+    if (
+      insertError &&
+      (insertError.code === '42703' || insertError.code === 'PGRST204' ||
+        (insertError.message ?? '').includes('escrow_create_tx_hash'))
+    ) {
+      const { escrow_create_tx_hash: _dropped, ...payloadWithoutChainHash } = insertPayload;
+      const retry = await supabase
+        .from('escrow_transactions')
+        .insert(payloadWithoutChainHash)
+        .select('id')
+        .single();
+      escrowRow = retry.data;
+      insertError = retry.error;
+    }
+
+    if (insertError || !escrowRow) {
+      // eslint-disable-next-line no-console
+      console.error('escrow_transactions insert failed', {
+        code: insertError?.code,
+        message: insertError?.message,
+        details: insertError?.details,
+        hint: insertError?.hint,
+        payload: insertPayload,
+      });
+      toast.error(
+        `On-chain escrow created (${escrowResult.txHash}) but we could not record it: ${
+          insertError?.message ?? 'no row returned'
+        }`,
+        { duration: 12000 }
+      );
+      return null;
+    }
+
+    trackEvent('escrow_created', {
+      escrow_id: escrowRow.id,
+      chain_escrow_id: escrowResult.escrowId ?? escrowResult.txHash,
+      chain_tx_hash: escrowResult.txHash,
+      asset_id: asset.id,
+    });
+    return escrowRow.id;
+  };
 
   const fetchAsset = async (assetId: string) => {
     setLoading(true);
@@ -152,14 +300,9 @@ export default function AssetPurchase() {
           ) => Promise<{ data: unknown; error: { message?: string; code?: string } | null }>;
         };
 
-        const [{ data: buyerProfile }, sellerWalletResult] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('wallet_address')
-            .eq('user_id', user.id)
-            .maybeSingle(),
-          rpcClient.rpc('get_seller_wallet_address', { p_user_id: asset.owner_id }),
-        ]);
+        const sellerWalletResult = await rpcClient.rpc('get_seller_wallet_address', {
+          p_user_id: asset.owner_id,
+        });
 
         let sellerWallet = '';
         if (!sellerWalletResult.error && typeof sellerWalletResult.data === 'string') {
@@ -211,83 +354,17 @@ export default function AssetPurchase() {
 
         // Persist the escrow as the canonical row that drives the entire
         // post-transaction system — only after the EscrowCreate is validated
-        // on-chain. Chain fields: tx hash, escrow sequence, real addresses.
-        const nowIso = new Date().toISOString();
-        const insertPayload = {
-          buyer_id: user.id,
-          seller_id: asset.owner_id,
-          asset_id: asset.id,
-          amount_usd: asset.estimated_value,
-          amount_xrp: escrowResult.amountXrp ?? null,
-          platform_fee_usd: Number((asset.estimated_value * 0.025).toFixed(2)),
-          buyer_address:
-            escrowResult.buyerAddress ?? buyerProfile?.wallet_address ?? `pending:${user.id}`,
-          seller_address: sellerWallet,
-          escrow_sequence: escrowResult.escrowSequence ?? null,
-          escrow_create_tx_hash: escrowResult.txHash,
-          status: 'funded',
-          escrow_status: 'held',
-          funded_at: nowIso,
-          created_at: nowIso,
-        };
-
-        let escrowRow: { id: string } | null = null;
-        let insertError: { code?: string; message?: string; details?: string; hint?: string } | null = null;
-
-        const firstAttempt = await supabase
-          .from('escrow_transactions')
-          .insert(insertPayload)
-          .select('id')
-          .single();
-        escrowRow = firstAttempt.data;
-        insertError = firstAttempt.error;
-
-        // If production hasn't added escrow_create_tx_hash yet, retry without
-        // it so the purchase still records (the chain refs stay in the toast/log).
-        if (
-          insertError &&
-          (insertError.code === '42703' || insertError.code === 'PGRST204' ||
-            (insertError.message ?? '').includes('escrow_create_tx_hash'))
-        ) {
-          const { escrow_create_tx_hash: _dropped, ...payloadWithoutChainHash } = insertPayload;
-          const retry = await supabase
-            .from('escrow_transactions')
-            .insert(payloadWithoutChainHash)
-            .select('id')
-            .single();
-          escrowRow = retry.data;
-          insertError = retry.error;
-        }
-
-        if (insertError || !escrowRow) {
-          // eslint-disable-next-line no-console
-          console.error('escrow_transactions insert failed', {
-            code: insertError?.code,
-            message: insertError?.message,
-            details: insertError?.details,
-            hint: insertError?.hint,
-            payload: insertPayload,
-          });
-          toast.error(
-            `On-chain escrow created (${escrowResult.txHash}) but we could not record it: ${
-              insertError?.message ?? 'no row returned'
-            }`,
-            { duration: 12000 }
-          );
+        // on-chain. Dedupes on the tx hash so a resumed sign can't double-insert.
+        const escrowRowId = await recordEscrowResult(escrowResult);
+        if (!escrowRowId) {
           setPurchaseStep('details');
           return;
         }
 
         toast.success('Escrow created. Tracking your order…');
-        setCreatedEscrowId(escrowRow.id);
-        trackEvent('escrow_created', {
-          escrow_id: escrowRow.id,
-          chain_escrow_id: escrowResult.escrowId,
-          chain_tx_hash: escrowResult.txHash,
-          asset_id: asset.id,
-        });
+        setCreatedEscrowId(escrowRowId);
         setPurchaseStep('complete');
-        navigate(`/order/${escrowRow.id}`);
+        navigate(`/order/${escrowRowId}`);
         return;
       } else {
         // Direct purchase without escrow
