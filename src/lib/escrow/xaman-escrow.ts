@@ -47,8 +47,9 @@ interface XummPayloadCreateResponse {
 }
 
 interface XummPayloadStatus {
-  meta: { resolved: boolean; signed: boolean; expired: boolean; cancelled: boolean };
-  response: { account?: string; txid?: string; dispatched_result?: string };
+  meta?: { resolved: boolean; signed: boolean; expired: boolean; cancelled: boolean };
+  response?: { account?: string; txid?: string; dispatched_result?: string };
+  error?: string;
 }
 
 const XRPL_ADDRESS_RE = /^r[1-9A-HJ-NP-Za-km-z]{24,33}$/;
@@ -62,10 +63,14 @@ async function createPayload(txjson: Record<string, unknown>): Promise<XummPaylo
     body: JSON.stringify({ txjson }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
+  if (!res.ok || data?.error) {
+    // eslint-disable-next-line no-console
+    console.error('[xaman-escrow] create-payload response', { status: res.status, keys: Object.keys(data ?? {}), error: data?.error });
     throw new Error(data?.error || `Payload service error (${res.status})`);
   }
   if (!data?.uuid) {
+    // eslint-disable-next-line no-console
+    console.error('[xaman-escrow] create-payload missing uuid', { keys: Object.keys(data ?? {}) });
     throw new Error('Xaman did not return a payload id');
   }
   return data as XummPayloadCreateResponse;
@@ -74,8 +79,14 @@ async function createPayload(txjson: Record<string, unknown>): Promise<XummPaylo
 async function getPayload(uuid: string): Promise<XummPayloadStatus> {
   const res = await fetch(`/api/xumm/get-payload?uuid=${encodeURIComponent(uuid)}`);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
+  if (!res.ok || data?.error) {
+    // eslint-disable-next-line no-console
+    console.error('[xaman-escrow] get-payload response', { status: res.status, keys: Object.keys(data ?? {}), error: data?.error });
     throw new Error(data?.error || `Payload status error (${res.status})`);
+  }
+  if (!data?.meta) {
+    // eslint-disable-next-line no-console
+    console.error('[xaman-escrow] get-payload missing meta', { keys: Object.keys(data ?? {}) });
   }
   return data as XummPayloadStatus;
 }
@@ -86,7 +97,7 @@ async function waitForSignature(uuid: string): Promise<XummPayloadStatus> {
   const deadline = Date.now() + SIGN_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const status = await getPayload(uuid);
-    if (status.meta.resolved) {
+    if (status.meta?.resolved) {
       return status;
     }
     await sleep(POLL_INTERVAL_MS);
@@ -199,15 +210,25 @@ export async function createEscrowViaXaman(params: {
   window.open(deepLink, '_blank');
 
   const status = await waitForSignature(payload.uuid);
-  if (!status.meta.signed || !status.response.txid) {
-    throw new Error('Escrow signing was declined or expired in Xaman.');
+  if (!status.meta?.signed || !status.response?.txid) {
+    // eslint-disable-next-line no-console
+    console.error('[xaman-escrow] payload resolved unsigned', {
+      meta: status.meta,
+      hasTxid: Boolean(status.response?.txid),
+      dispatched_result: status.response?.dispatched_result,
+    });
+    throw new Error(
+      status.response?.dispatched_result
+        ? `EscrowCreate failed on-chain: ${status.response.dispatched_result}`
+        : 'Escrow signing was declined or expired in Xaman.'
+    );
   }
 
   const txHash = status.response.txid;
   const onChain = await verifyEscrowCreateOnChain(txHash);
 
   return {
-    buyerAddress: onChain.account || status.response.account || '',
+    buyerAddress: onChain.account || status.response?.account || '',
     sellerAddress: onChain.destination || sellerAddress,
     txHash,
     escrowSequence: onChain.sequence,

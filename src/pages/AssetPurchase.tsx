@@ -143,10 +143,14 @@ export default function AssetPurchase() {
         // XRP, and the buyer's real address comes back from the Xaman signer.
         // profiles RLS is own-row only, so the seller's wallet comes through
         // the SECURITY DEFINER RPC (returns wallet_address for user_id only).
-        const sellerWalletRpc = supabase.rpc as unknown as (
-          fn: string,
-          args: Record<string, unknown>
-        ) => Promise<{ data: unknown; error: { message?: string; code?: string } | null }>;
+        // NOTE: keep the member call — extracting supabase.rpc unbinds `this`
+        // and postgrest-js throws "Cannot read properties of undefined".
+        const rpcClient = supabase as unknown as {
+          rpc: (
+            fn: string,
+            args: Record<string, unknown>
+          ) => Promise<{ data: unknown; error: { message?: string; code?: string } | null }>;
+        };
 
         const [{ data: buyerProfile }, sellerWalletResult] = await Promise.all([
           supabase
@@ -154,7 +158,7 @@ export default function AssetPurchase() {
             .select('wallet_address')
             .eq('user_id', user.id)
             .maybeSingle(),
-          sellerWalletRpc('get_seller_wallet_address', { p_user_id: asset.owner_id }),
+          rpcClient.rpc('get_seller_wallet_address', { p_user_id: asset.owner_id }),
         ]);
 
         let sellerWallet = '';
