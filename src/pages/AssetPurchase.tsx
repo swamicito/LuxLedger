@@ -2,7 +2,7 @@
  * Asset Purchase Page with LuxGuard Escrow Integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,50 +74,72 @@ export default function AssetPurchase() {
     }
   }, [id]);
 
-  // If the tab was reloaded while the user signed in Xaman, the pending payload
-  // survives in localStorage. Resume it: finish the sign poll, verify on-chain,
-  // write escrow_transactions, and continue to /order/:id.
-  useEffect(() => {
-    if (!asset || !user) return;
+  // If the tab was reloaded while the user signed in Xaman — or the poll died
+  // once on a transient error while the tab stayed open — the pending payload
+  // survives in localStorage. Keep retrying it: on mount, on tab wake, and on
+  // an interval, until the escrow row is recorded. Idempotent via tx-hash dedupe.
+  const resumingRef = useRef(false);
+  const resumeAnnouncedRef = useRef(false);
+
+  const attemptResume = useCallback(async () => {
+    if (!asset || !user || resumingRef.current) return;
     const pending = readPendingEscrow();
     if (!pending || pending.assetId !== asset.id || pending.buyerUserId !== user.id) return;
 
-    let cancelled = false;
-    (async () => {
-      setPurchaseStep('processing');
+    resumingRef.current = true;
+    setPurchaseStep('processing');
+    if (!resumeAnnouncedRef.current) {
       toast.info('Finishing your escrow — checking the Xaman signature…');
-      try {
-        const escrowResult = await resumePendingEscrow();
-        if (cancelled) return;
-        if (!escrowResult) {
-          setPurchaseStep('details');
-          return;
-        }
-        const rowId = await recordEscrowResult(escrowResult);
-        if (cancelled) return;
-        if (!rowId) {
-          setPurchaseStep('details');
-          return;
-        }
-        toast.success('Escrow created. Tracking your order…');
-        setCreatedEscrowId(rowId);
-        setPurchaseStep('complete');
-        navigate(`/order/${rowId}`);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Escrow resume failed:', error);
-        if (cancelled) return;
-        toast.error(
-          error instanceof Error ? error.message : 'Could not finish the escrow. Please try again.',
-          { duration: 8000 }
-        );
+      resumeAnnouncedRef.current = true;
+    }
+    try {
+      const escrowResult = await resumePendingEscrow();
+      if (!escrowResult) {
         setPurchaseStep('details');
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
+      const rowId = await recordEscrowResult(escrowResult);
+      if (!rowId) {
+        // Insert failed — the verified chain result stays pending and the
+        // next interval/wake retries it. Hash was already toasted by the caller.
+        setPurchaseStep('details');
+        return;
+      }
+      toast.success('Escrow created. Tracking your order…');
+      setCreatedEscrowId(rowId);
+      setPurchaseStep('complete');
+      navigate(`/order/${rowId}`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Escrow resume failed:', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Could not finish the escrow. Please try again.',
+        { duration: 8000 }
+      );
+      setPurchaseStep('details');
+    } finally {
+      resumingRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset, user, navigate]);
+
+  useEffect(() => {
+    attemptResume();
+    const onWake = () => {
+      if (document.visibilityState === 'visible') attemptResume();
     };
-  }, [asset, user]);
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('focus', onWake);
+    const interval = window.setInterval(() => {
+      const pending = readPendingEscrow();
+      if (pending && asset && pending.assetId === asset.id) attemptResume();
+    }, 30_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onWake);
+      window.removeEventListener('focus', onWake);
+      window.clearInterval(interval);
+    };
+  }, [attemptResume]);
 
   // Persist a validated on-chain escrow exactly once. Dedupes on
   // escrow_create_tx_hash so a resumed purchase never inserts twice.

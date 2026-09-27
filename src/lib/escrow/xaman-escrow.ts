@@ -166,10 +166,24 @@ export async function waitForSignature(uuid: string): Promise<XummPayloadStatus>
 
   try {
     const deadline = Date.now() + SIGN_TIMEOUT_MS;
+    // Transient get-payload failures (Vercel cold start, offline handoff, a
+    // single 502) must not kill the whole escrow chain — the signed tx is
+    // already destined for the ledger. Only give up after a sustained streak.
+    let consecutiveErrors = 0;
     while (Date.now() < deadline) {
-      const status = await getPayload(uuid);
-      if (status.meta?.resolved) {
-        return status;
+      try {
+        const status = await getPayload(uuid);
+        if (status.meta?.resolved) {
+          return status;
+        }
+        consecutiveErrors = 0;
+      } catch (error) {
+        consecutiveErrors += 1;
+        // eslint-disable-next-line no-console
+        console.error('[xaman-escrow] get-payload poll failed', { uuid, consecutiveErrors, error });
+        if (consecutiveErrors >= 12) {
+          throw error instanceof Error ? error : new Error('Xaman status unreachable.');
+        }
       }
       await new Promise<void>((resolve) => {
         const timer = setTimeout(() => {

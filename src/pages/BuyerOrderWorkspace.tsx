@@ -11,7 +11,7 @@
  * `evaluate_escrow_release` RPC. No mocks, no local release logic.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -393,25 +393,53 @@ export default function BuyerOrderWorkspace() {
     [recordFinish, fetchAll]
   );
 
-  // Resume a finish signature that survived a mobile tab reload.
-  useEffect(() => {
+  // Resume a finish signature that survived a tab reload — or whose poll died
+  // on a transient error while the tab stayed open. Retries on mount, on tab
+  // wake, and on an interval until escrow_finish_tx_hash is recorded.
+  const finishResumingRef = useRef(false);
+  const finishAnnouncedRef = useRef(false);
+
+  const attemptFinishResume = useCallback(async () => {
+    if (!escrowId || finishResumingRef.current) return;
     const pending = readPendingFinish();
-    if (!pending || !escrowId || pending.escrowId !== escrowId) return;
-    (async () => {
-      setFinishing(true);
+    if (!pending || pending.escrowId !== escrowId) return;
+
+    finishResumingRef.current = true;
+    setFinishing(true);
+    if (!finishAnnouncedRef.current) {
       toast.info('Finishing your on-chain release…');
-      try {
-        const result = await resumePendingFinish(escrowId);
-        if (result) await recordFinish(result);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'EscrowFinish failed.'
-        );
-      } finally {
-        setFinishing(false);
-      }
-    })();
+      finishAnnouncedRef.current = true;
+    }
+    try {
+      const result = await resumePendingFinish(escrowId);
+      if (result) await recordFinish(result);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'EscrowFinish failed.'
+      );
+    } finally {
+      finishResumingRef.current = false;
+      setFinishing(false);
+    }
   }, [escrowId, recordFinish]);
+
+  useEffect(() => {
+    attemptFinishResume();
+    const onWake = () => {
+      if (document.visibilityState === 'visible') attemptFinishResume();
+    };
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('focus', onWake);
+    const interval = window.setInterval(() => {
+      const pending = readPendingFinish();
+      if (pending && pending.escrowId === escrowId) attemptFinishResume();
+    }, 30_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onWake);
+      window.removeEventListener('focus', onWake);
+      window.clearInterval(interval);
+    };
+  }, [attemptFinishResume, escrowId]);
 
   const confirmReceipt = useCallback(async () => {
     if (!escrow) return;
