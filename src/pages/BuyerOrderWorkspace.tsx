@@ -44,6 +44,8 @@ import {
   readPendingFinish,
   resumePendingFinish,
   clearPendingFinish,
+  findEscrowFinishTxHash,
+  isEscrowConsumedOnChain,
   escrowNetwork,
 } from '@/lib/escrow/xaman-escrow';
 import type { XamanFinishResult } from '@/lib/escrow/xaman-escrow';
@@ -77,6 +79,7 @@ interface EscrowRow {
   released_at: string | null;
   release_reason: string | null;
   escrow_sequence: number | null;
+  escrow_create_tx_hash: string | null;
   escrow_finish_tx_hash: string | null;
   created_at: string;
   funded_at: string | null;
@@ -227,7 +230,7 @@ export default function BuyerOrderWorkspace() {
     const { data, error: rowError } = await supabase
       .from('escrow_transactions')
       .select(
-        'id, asset_id, buyer_id, seller_id, buyer_address, seller_address, amount_usd, status, escrow_status, carrier, tracking_number, shipped_at, delivered_at, tracking_delivered, tracking_delivered_at, buyer_confirmed, buyer_confirmed_at, dispute_active, dispute_window_expired, dispute_filed_at, released_at, release_reason, escrow_sequence, escrow_finish_tx_hash, created_at, funded_at, updated_at'
+        'id, asset_id, buyer_id, seller_id, buyer_address, seller_address, amount_usd, status, escrow_status, carrier, tracking_number, shipped_at, delivered_at, tracking_delivered, tracking_delivered_at, buyer_confirmed, buyer_confirmed_at, dispute_active, dispute_window_expired, dispute_filed_at, released_at, release_reason, escrow_sequence, escrow_create_tx_hash, escrow_finish_tx_hash, created_at, funded_at, updated_at'
       )
       .eq('id', escrowId)
       .maybeSingle();
@@ -354,7 +357,11 @@ export default function BuyerOrderWorkspace() {
         }
       }
       clearPendingFinish();
-      toast.success(`Escrow settled on-chain. Tx: ${result.txHash}`);
+      toast.success(
+        result.alreadySettled
+          ? `Escrow was already settled on-chain — recorded tx ${result.txHash}`
+          : `Escrow settled on-chain. Tx: ${result.txHash}`
+      );
       await fetchAll();
     },
     [escrowId, fetchAll]
@@ -440,6 +447,52 @@ export default function BuyerOrderWorkspace() {
       window.clearInterval(interval);
     };
   }, [attemptFinishResume, escrowId]);
+
+  // On-chain truth check: the DB can say released while escrow_finish_tx_hash
+  // is NULL (a finish signed on a killed tab, or a SQL-stamped row). If the
+  // ledger no longer holds the Escrow object, recover the real finish hash
+  // from the owner's history and record it — no new signature needed.
+  const [chainSettled, setChainSettled] = useState(false);
+  const healCheckedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!escrow || !released || escrow.escrow_finish_tx_hash || chainSettled) return;
+    if (!escrow.escrow_sequence || !escrow.escrow_create_tx_hash) return;
+    if (!/^r[1-9A-HJ-NP-Za-km-z]{24,33}$/.test(escrow.buyer_address ?? '')) return;
+    if (healCheckedRef.current === escrow.id) return;
+    healCheckedRef.current = escrow.id;
+
+    (async () => {
+      try {
+        const consumed = await isEscrowConsumedOnChain(
+          escrow.buyer_address,
+          escrow.escrow_create_tx_hash!
+        );
+        if (!consumed) return;
+        const prior = await findEscrowFinishTxHash(
+          escrow.buyer_address,
+          escrow.escrow_sequence!
+        );
+        if (prior) {
+          await recordFinish({
+            txHash: prior.hash,
+            signerAddress: prior.account,
+            ownerAddress: escrow.buyer_address,
+            offerSequence: escrow.escrow_sequence!,
+            explorerUrl: `https://${escrowNetwork() === 'testnet' ? 'testnet.xrpl.org' : 'livenet.xrpl.org'}/transactions/${prior.hash}`,
+            alreadySettled: true,
+          });
+        } else {
+          // Object is gone but we couldn't locate the finish tx — still show
+          // the truthful settled state rather than offering another finish.
+          setChainSettled(true);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[BuyerOrderWorkspace] chain settle check failed', error);
+      }
+    })();
+  }, [escrow, released, chainSettled, recordFinish]);
 
   const confirmReceipt = useCallback(async () => {
     if (!escrow) return;
@@ -720,16 +773,24 @@ export default function BuyerOrderWorkspace() {
                     <p className="mt-2 text-xs text-emerald-300/80">
                       Funds released {formatDateTime(escrow.released_at)}.
                     </p>
-                    {escrow.escrow_finish_tx_hash ? (
-                      <a
-                        href={`https://${escrowNetwork() === 'testnet' ? 'testnet.xrpl.org' : 'livenet.xrpl.org'}/transactions/${escrow.escrow_finish_tx_hash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-1 text-xs text-emerald-300 hover:text-emerald-200"
-                      >
-                        Settled on-chain · view EscrowFinish
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                    {escrow.escrow_finish_tx_hash || chainSettled ? (
+                      <div className="mt-3">
+                        {escrow.escrow_finish_tx_hash ? (
+                          <a
+                            href={`https://${escrowNetwork() === 'testnet' ? 'testnet.xrpl.org' : 'livenet.xrpl.org'}/transactions/${escrow.escrow_finish_tx_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:text-emerald-200"
+                          >
+                            Settled on-chain · view EscrowFinish
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <p className="text-xs text-emerald-300/80">
+                            Settled on-chain — the escrow object is consumed.
+                          </p>
+                        )}
+                      </div>
                     ) : escrow.escrow_sequence ? (
                       <>
                         <p className="mt-3 text-[0.7rem] text-emerald-300/70">

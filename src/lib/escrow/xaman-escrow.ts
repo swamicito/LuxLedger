@@ -229,7 +229,19 @@ interface VerifiedEscrowTx {
   destination: string;
 }
 
-async function fetchValidatedTx(jsonRpc: string, txHash: string): Promise<LedgerTx> {
+/** Carries the engine result code (e.g. tecNO_TARGET) so callers can react. */
+export class LedgerTxError extends Error {
+  code: string;
+  constructor(code: string, txType: string) {
+    super(`${txType} failed on-chain: ${code}`);
+    this.name = 'LedgerTxError';
+    this.code = code;
+  }
+}
+
+// Fetches a validated tx WITHOUT gating on the engine result, so callers can
+// inspect meta.TransactionResult themselves (e.g. tecNO_TARGET recovery).
+async function fetchLedgerTx(jsonRpc: string, txHash: string): Promise<LedgerTx> {
   const res = await fetch(jsonRpc, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -246,9 +258,6 @@ async function fetchValidatedTx(jsonRpc: string, txHash: string): Promise<Ledger
   if (!tx.validated) {
     throw new Error('Escrow transaction is not validated on the ledger yet. Try again in a few seconds.');
   }
-  if (tx.meta?.TransactionResult !== 'tesSUCCESS') {
-    throw new Error(`Escrow transaction failed on-chain: ${tx.meta?.TransactionResult ?? 'unknown'}`);
-  }
   return tx;
 }
 
@@ -258,7 +267,10 @@ async function verifyEscrowCreateOnChain(txHash: string): Promise<VerifiedEscrow
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const tx = await fetchValidatedTx(jsonRpc, txHash);
+      const tx = await fetchLedgerTx(jsonRpc, txHash);
+      if (tx.meta?.TransactionResult !== 'tesSUCCESS') {
+        throw new LedgerTxError(tx.meta?.TransactionResult ?? 'unknown', 'EscrowCreate');
+      }
       if (tx.TransactionType !== 'EscrowCreate') {
         throw new Error('Signed transaction was not an EscrowCreate.');
       }
@@ -285,7 +297,10 @@ async function verifyEscrowFinishOnChain(txHash: string): Promise<LedgerTx> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const tx = await fetchValidatedTx(jsonRpc, txHash);
+      const tx = await fetchLedgerTx(jsonRpc, txHash);
+      if (tx.meta?.TransactionResult !== 'tesSUCCESS') {
+        throw new LedgerTxError(tx.meta?.TransactionResult ?? 'unknown', 'EscrowFinish');
+      }
       if (tx.TransactionType !== 'EscrowFinish') {
         throw new Error('Signed transaction was not an EscrowFinish.');
       }
@@ -303,6 +318,81 @@ async function verifyEscrowFinishOnChain(txHash: string): Promise<LedgerTx> {
     }
   }
   throw lastError ?? new Error('Could not verify the EscrowFinish transaction on-chain.');
+}
+
+/**
+ * Scan the owner's account history for a prior tesSUCCESS EscrowFinish that
+ * consumed this escrow. Recovers the real hash when a second finish gets
+ * tecNO_TARGET because the object is already gone.
+ */
+export async function findEscrowFinishTxHash(
+  ownerAddress: string,
+  offerSequence: number
+): Promise<{ hash: string; account: string } | null> {
+  const { jsonRpc } = NETWORKS[escrowNetwork()];
+  let marker: unknown;
+  for (let page = 0; page < 5; page++) {
+    const res = await fetch(jsonRpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method: 'account_tx',
+        params: [{
+          account: ownerAddress,
+          ledger_index_min: -1,
+          ledger_index_max: -1,
+          binary: false,
+          limit: 200,
+          forward: false,
+          ...(marker ? { marker } : {}),
+        }],
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const txs = data?.result?.transactions;
+    if (!res.ok || !Array.isArray(txs)) return null;
+    for (const entry of txs) {
+      const tx = (entry as { tx?: LedgerTx & { hash?: string } }).tx ?? (entry as LedgerTx & { hash?: string });
+      const meta = (entry as { meta?: LedgerTx['meta'] }).meta ?? tx.meta;
+      if (
+        tx.TransactionType === 'EscrowFinish' &&
+        Number((tx as { OfferSequence?: number }).OfferSequence) === offerSequence &&
+        meta?.TransactionResult === 'tesSUCCESS' &&
+        (tx as { hash?: string }).hash
+      ) {
+        return { hash: (tx as { hash: string }).hash, account: tx.Account ?? '' };
+      }
+    }
+    marker = data?.result?.marker;
+    if (!marker) break;
+  }
+  return null;
+}
+
+/**
+ * True when the ledger no longer holds the Escrow object created by
+ * escrow_create_tx_hash — i.e. a Finish (or Cancel) already consumed it.
+ */
+export async function isEscrowConsumedOnChain(
+  ownerAddress: string,
+  createTxHash: string
+): Promise<boolean> {
+  if (!XRPL_ADDRESS_RE.test(ownerAddress) || !createTxHash) return false;
+  const { jsonRpc } = NETWORKS[escrowNetwork()];
+  const res = await fetch(jsonRpc, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      method: 'account_objects',
+      params: [{ account: ownerAddress, ledger_index: 'validated', type: 'escrow' }],
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  const objects = data?.result?.account_objects;
+  if (!res.ok || !Array.isArray(objects)) return false;
+  return !objects.some(
+    (o) => (o as { PreviousTxnID?: string }).PreviousTxnID === createTxHash
+  );
 }
 
 function toHex(value: string): string {
@@ -466,6 +556,9 @@ export interface XamanFinishResult {
   ownerAddress: string;
   offerSequence: number;
   explorerUrl: string;
+  // True when the escrow was already consumed by an earlier EscrowFinish and
+  // we recovered that tx hash (e.g. the second attempt hit tecNO_TARGET).
+  alreadySettled?: boolean;
 }
 
 export function savePendingFinish(pending: Omit<PendingXamanFinish, 'createdAt'>): void {
@@ -602,15 +695,39 @@ async function finishSignedFinish(
   }
 
   const txHash = status.response.txid;
-  const tx = await verifyEscrowFinishOnChain(txHash);
 
-  return {
-    txHash,
-    signerAddress: tx.Account || status.response?.account || '',
-    ownerAddress: params.ownerAddress,
-    offerSequence: params.offerSequence,
-    explorerUrl: `${network.explorer}/transactions/${txHash}`,
-  };
+  try {
+    const tx = await verifyEscrowFinishOnChain(txHash);
+    return {
+      txHash,
+      signerAddress: tx.Account || status.response?.account || '',
+      ownerAddress: params.ownerAddress,
+      offerSequence: params.offerSequence,
+      explorerUrl: `${network.explorer}/transactions/${txHash}`,
+    };
+  } catch (error) {
+    // tecNO_TARGET (or any finish failure) may mean an EARLIER EscrowFinish
+    // already deleted the object — recover that hash instead of reporting a
+    // mystery failure. The escrow is settled either way.
+    const prior = await findEscrowFinishTxHash(params.ownerAddress, params.offerSequence);
+    if (prior) {
+      // eslint-disable-next-line no-console
+      console.error('[xaman-escrow] finish failed but prior finish found', {
+        attempted: txHash,
+        recovered: prior.hash,
+        reason: error instanceof Error ? error.message : error,
+      });
+      return {
+        txHash: prior.hash,
+        signerAddress: prior.account,
+        ownerAddress: params.ownerAddress,
+        offerSequence: params.offerSequence,
+        explorerUrl: `${network.explorer}/transactions/${prior.hash}`,
+        alreadySettled: true,
+      };
+    }
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------

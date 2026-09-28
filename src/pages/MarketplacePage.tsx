@@ -18,6 +18,7 @@ interface Listing {
   token_type: string;
   media_url: string | null;
   seller_address: string;
+  seller_name: string | null;
   created_at: string;
   approved: boolean;
 }
@@ -160,9 +161,41 @@ export default function MarketplacePage() {
           token_type: "offchain",
           media_url: row.images?.[0] ?? null,
           seller_address: row.owner_id,
+          seller_name: null,
           created_at: row.created_at,
           approved: true,
         }));
+
+        // Seller display names: profiles RLS is own-row only, so resolve them
+        // through the SECURITY DEFINER RPC (returns public fields only).
+        const ownerIds = [...new Set(normalized.map((l) => l.seller_address))];
+        if (ownerIds.length > 0) {
+          try {
+            const rpcClient = supabase as unknown as {
+              rpc: (
+                fn: string,
+                args: Record<string, unknown>
+              ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+            };
+            const { data: publicProfiles, error: rpcError } = await rpcClient.rpc(
+              'get_public_profiles',
+              { p_user_ids: ownerIds }
+            );
+            if (!rpcError && Array.isArray(publicProfiles)) {
+              const names = new Map<string, string>(
+                publicProfiles.map(
+                  (p: { user_id: string; full_name: string | null; username: string | null }) =>
+                    [p.user_id, p.full_name ?? p.username ?? ''] as [string, string]
+                )
+              );
+              normalized.forEach((l) => {
+                l.seller_name = names.get(l.seller_address) || null;
+              });
+            }
+          } catch {
+            // RPC not deployed — cards fall back to the masked owner id.
+          }
+        }
 
         setListings(normalized);
       }
@@ -450,6 +483,7 @@ export default function MarketplacePage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => navigate(`/asset/${listing.id}`)}
                       className="border-gray-700 text-gray-300 hover:bg-gray-800 text-xs sm:text-sm h-8 sm:h-9 hidden sm:flex"
                     >
                       Details
@@ -458,7 +492,7 @@ export default function MarketplacePage() {
 
                   <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-800 hidden sm:block">
                     <p className="text-[10px] sm:text-xs text-gray-500">
-                      Seller: {listing.seller_address.slice(0, 8)}...{listing.seller_address.slice(-6)}
+                      Seller: {listing.seller_name || `${listing.seller_address.slice(0, 8)}...${listing.seller_address.slice(-6)}`}
                     </p>
                   </div>
                 </div>
