@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Navigation } from '@/components/ui/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,23 +52,47 @@ export default function AssetDetail() {
 
   const fetchAssetDetails = async () => {
     try {
-      // Fetch asset details
+      // Plain row read — the assets.owner_id FK points at auth.users, so an
+      // embedded profiles join errors out (PGRST200) and previously rendered
+      // "Asset not found" for real listings. Side data is fetched separately
+      // and tolerated if missing.
       const { data: assetData, error: assetError } = await supabase
         .from('assets')
-        .select(`
-          *,
-          profiles:owner_id (full_name, profile_image_url),
-          nft_tokens (*),
-          provenance_records (*)
-        `)
+        .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (assetError) throw assetError;
-      
-      setAsset(assetData);
-      setProvenance(assetData.provenance_records || []);
-      setNftData(assetData.nft_tokens?.[0] || null);
+      if (!assetData) {
+        setAsset(null);
+        return;
+      }
+
+      // Seller display name via the public-profile RPC (profiles RLS is own-row).
+      let sellerName: string | null = null;
+      if (assetData.owner_id) {
+        try {
+          const rpcClient = supabase as unknown as {
+            rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>;
+          };
+          const { data: publicProfiles } = await rpcClient.rpc('get_public_profiles', {
+            p_user_ids: [assetData.owner_id],
+          });
+          const p = Array.isArray(publicProfiles) ? publicProfiles[0] : null;
+          sellerName = p?.full_name ?? p?.username ?? null;
+        } catch {
+          // RPC not deployed — render falls back to 'Anonymous'.
+        }
+      }
+
+      const [nftRes, provRes] = await Promise.all([
+        supabase.from('nft_tokens').select('*').eq('asset_id', id),
+        supabase.from('provenance_records').select('*').eq('asset_id', id),
+      ]);
+
+      setAsset({ ...assetData, profiles: { full_name: sellerName ?? 'Anonymous' } });
+      setProvenance(provRes.error ? [] : (provRes.data ?? []));
+      setNftData(nftRes.error ? null : (nftRes.data?.[0] ?? null));
     } catch (error) {
       console.error('Error fetching asset:', error);
       toast.error('Failed to load asset details');
@@ -170,7 +193,6 @@ export default function AssetDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-muted rounded w-1/3"></div>
@@ -191,9 +213,14 @@ export default function AssetDetail() {
   if (!asset) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
+            <img
+              src="/brand/crown-mono.svg"
+              alt=""
+              aria-hidden="true"
+              className="mx-auto mb-6 h-14 w-14 opacity-80"
+            />
             <h2 className="text-2xl font-bold mb-4">Asset not found</h2>
             <Button onClick={() => navigate('/marketplace')}>
               Back to Marketplace
@@ -206,7 +233,6 @@ export default function AssetDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

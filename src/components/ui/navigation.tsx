@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WalletConnection } from "@/components/ui/wallet-connection";
-import { TokenizeAsset } from "@/components/ui/asset-tokenization";
 import { NotificationsDropdown } from "@/components/ui/notifications";
-import { Menu, X, User, LogOut, Gem } from "lucide-react";
+import { Menu, X, User, LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "react-router-dom";
@@ -19,9 +18,7 @@ export function Navigation() {
           {/* Logo */}
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-lg flex items-center justify-center">
-                <Gem className="h-5 w-5 text-white" />
-              </div>
+              <img src="/brand/crown-mono.svg" alt="" aria-hidden="true" className="w-8 h-8" />
               <span className="text-xl font-bold text-foreground">LuxLedger</span>
             </Link>
 
@@ -60,7 +57,12 @@ export function Navigation() {
 
           {/* Wallet Connection & Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <TokenizeAsset />
+            <Link to="/list-asset">
+              <Button variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                List an Asset
+              </Button>
+            </Link>
             <WalletConnection />
             {user && <NotificationsDropdown />}
             {user ? (
@@ -141,7 +143,12 @@ export function Navigation() {
               </Link>
             )}
             <div className="flex flex-col space-y-3 mt-4">
-              <TokenizeAsset className="w-full" />
+              <Link to="/list-asset" className="w-full">
+                <Button variant="outline" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  List an Asset
+                </Button>
+              </Link>
               <WalletConnection className="w-full" />
               {user ? (
                 <Button variant="outline" onClick={signOut} className="w-full">
