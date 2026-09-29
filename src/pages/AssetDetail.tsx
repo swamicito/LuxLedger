@@ -25,7 +25,6 @@ import {
 import { toast } from 'sonner';
 import { TrustStrip } from '@/components/ui/trust-strip';
 import { DualPrice, FeeBreakdown } from '@/components/ui/fee-breakdown';
-import { TrustBadge } from '@/components/ui/trust-signals';
 import { EscapeHatches } from '@/components/ui/escape-hatches';
 import { VideoProofDisplay } from '@/components/listing';
 import { isVideoRequired } from '@/lib/video-verification';
@@ -42,6 +41,12 @@ export default function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [bidAmount, setBidAmount] = useState('');
   const [isLiked, setIsLiked] = useState(false);
+  const [linkedEscrow, setLinkedEscrow] = useState<{
+    id: string;
+    buyer_id: string | null;
+    seller_id: string | null;
+    escrow_status: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -85,14 +90,24 @@ export default function AssetDetail() {
         }
       }
 
-      const [nftRes, provRes] = await Promise.all([
+      const [nftRes, provRes, escrowRes] = await Promise.all([
         supabase.from('nft_tokens').select('*').eq('asset_id', id),
         supabase.from('provenance_records').select('*').eq('asset_id', id),
+        // Latest escrow for this listing — presence alone hides the purchase
+        // UI even when status hasn't been flipped yet. RLS may hide the row
+        // from unrelated viewers; the status check below covers that case.
+        (supabase.from('escrow_transactions') as any)
+          .select('id, buyer_id, seller_id, escrow_status')
+          .eq('asset_id', id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       setAsset({ ...assetData, profiles: { full_name: sellerName ?? 'Anonymous' } });
       setProvenance(provRes.error ? [] : (provRes.data ?? []));
       setNftData(nftRes.error ? null : (nftRes.data?.[0] ?? null));
+      setLinkedEscrow(escrowRes.error ? null : (escrowRes.data ?? null));
     } catch (error) {
       console.error('Error fetching asset:', error);
       toast.error('Failed to load asset details');
@@ -269,9 +284,14 @@ export default function AssetDetail() {
           </div>
         </div>
 
-        {/* Trust Strip */}
+        {/* Trust Strip — only claim what this listing actually carries:
+            "authenticated" applies once an asset cleared review, and there is
+            no insured-transit product yet, so that claim stays hidden. */}
         <div className="mb-6">
-          <TrustStrip />
+          <TrustStrip
+            showVerification={['verified', 'tokenized', 'listed', 'sold'].includes(asset.status)}
+            showDelivery={false}
+          />
         </div>
 
         {/* Main Content */}
@@ -321,8 +341,8 @@ export default function AssetDetail() {
                   asset.status === 'listed' ? 'default' :
                   asset.status === 'tokenized' ? 'secondary' :
                   'outline'
-                }>
-                  {nftData ? 'NFT' : asset.status}
+                } className="capitalize">
+                  {nftData ? 'NFT' : String(asset.status).replace('_', ' ')}
                 </Badge>
                 {nftData && (
                   <Badge variant="outline">
@@ -345,8 +365,51 @@ export default function AssetDetail() {
               </div>
             </div>
 
+            {/* Availability — sold or in-escrow listings are read-only */}
+            {(asset.status !== 'listed' || linkedEscrow) && (
+              <Card>
+                <CardContent className="p-5 flex items-start gap-3">
+                  <Shield className="h-5 w-5 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold">
+                      {asset.status === 'sold' || linkedEscrow?.escrow_status === 'released'
+                        ? 'Sold'
+                        : linkedEscrow
+                        ? 'In escrow'
+                        : 'Not listed for sale'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {asset.status === 'sold' || linkedEscrow?.escrow_status === 'released'
+                        ? 'This asset has been sold.'
+                        : linkedEscrow
+                        ? 'A purchase is in progress — funds are held in escrow until delivery is confirmed.'
+                        : 'This asset is not currently available for purchase.'}
+                    </p>
+                    {linkedEscrow && user?.id === linkedEscrow.buyer_id && (
+                      <Button
+                        className="mt-3"
+                        size="sm"
+                        onClick={() => navigate(`/order/${linkedEscrow.id}`)}
+                      >
+                        Track this order
+                      </Button>
+                    )}
+                    {linkedEscrow && user?.id === linkedEscrow.seller_id && (
+                      <Button
+                        className="mt-3"
+                        size="sm"
+                        onClick={() => navigate(`/fulfill/${linkedEscrow.id}`)}
+                      >
+                        Manage fulfillment
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Trading Interface */}
-            {asset.status === 'listed' && user?.id !== asset.owner_id && (
+            {asset.status === 'listed' && !linkedEscrow && user?.id !== asset.owner_id && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">

@@ -169,6 +169,7 @@ export default function AssetPurchase() {
     if (existing?.id) {
       // Hash already recorded — the pending payload has served its purpose.
       clearPendingEscrow();
+      await markAssetSold(existing.id);
       return existing.id;
     }
 
@@ -245,7 +246,44 @@ export default function AssetPurchase() {
       chain_tx_hash: escrowResult.txHash,
       asset_id: asset.id,
     });
+    await markAssetSold(escrowRow.id);
     return escrowRow.id;
+  };
+
+  // Flip the listing to 'sold' once an escrow row exists. assets UPDATE is
+  // owner-only under RLS, so the buyer goes through the SECURITY DEFINER RPC
+  // (mark_asset_sold validates caller = escrow buyer). A direct update is the
+  // fallback for permissive environments. Never blocks the purchase flow.
+  const markAssetSold = async (escrowRowId: string) => {
+    if (!asset) return;
+    try {
+      const rpcClient = supabase as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string; code?: string } | null }>;
+      };
+      const { error } = await rpcClient.rpc('mark_asset_sold', {
+        p_asset_id: asset.id,
+        p_escrow_id: escrowRowId,
+      });
+      if (error) throw error;
+      return;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('mark_asset_sold RPC failed — trying direct update', error);
+    }
+    try {
+      const { error: updateError } = await supabase
+        .from('assets')
+        .update({ status: 'sold' })
+        .eq('id', asset.id)
+        .neq('status', 'sold');
+      if (updateError) {
+        // eslint-disable-next-line no-console
+        console.error('assets.status update failed', updateError);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('assets.status update threw', error);
+    }
   };
 
   const fetchAsset = async (assetId: string) => {
@@ -304,6 +342,23 @@ export default function AssetPurchase() {
 
   const handlePurchase = async () => {
     if (!asset || !user) return;
+
+    // Refuse a second purchase: the listing must still be listed and must not
+    // already have an escrow row (assets.status may lag while the flip lands).
+    if (asset.status !== 'listed') {
+      toast.error('This asset is no longer listed for sale.');
+      return;
+    }
+    const { data: existingEscrow } = await (supabase
+      .from('escrow_transactions') as any)
+      .select('id')
+      .eq('asset_id', asset.id)
+      .limit(1)
+      .maybeSingle();
+    if (existingEscrow?.id) {
+      toast.error('This asset is already in escrow.');
+      return;
+    }
 
     setPurchaseStep('processing');
     trackEvent('asset_purchase_initiated', { 
