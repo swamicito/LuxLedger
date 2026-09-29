@@ -448,52 +448,6 @@ export default function BuyerOrderWorkspace() {
     };
   }, [attemptFinishResume, escrowId]);
 
-  // On-chain truth check: the DB can say released while escrow_finish_tx_hash
-  // is NULL (a finish signed on a killed tab, or a SQL-stamped row). If the
-  // ledger no longer holds the Escrow object, recover the real finish hash
-  // from the owner's history and record it — no new signature needed.
-  const [chainSettled, setChainSettled] = useState(false);
-  const healCheckedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!escrow || !released || escrow.escrow_finish_tx_hash || chainSettled) return;
-    if (!escrow.escrow_sequence || !escrow.escrow_create_tx_hash) return;
-    if (!/^r[1-9A-HJ-NP-Za-km-z]{24,33}$/.test(escrow.buyer_address ?? '')) return;
-    if (healCheckedRef.current === escrow.id) return;
-    healCheckedRef.current = escrow.id;
-
-    (async () => {
-      try {
-        const consumed = await isEscrowConsumedOnChain(
-          escrow.buyer_address,
-          escrow.escrow_create_tx_hash!
-        );
-        if (!consumed) return;
-        const prior = await findEscrowFinishTxHash(
-          escrow.buyer_address,
-          escrow.escrow_sequence!
-        );
-        if (prior) {
-          await recordFinish({
-            txHash: prior.hash,
-            signerAddress: prior.account,
-            ownerAddress: escrow.buyer_address,
-            offerSequence: escrow.escrow_sequence!,
-            explorerUrl: `https://${escrowNetwork() === 'testnet' ? 'testnet.xrpl.org' : 'livenet.xrpl.org'}/transactions/${prior.hash}`,
-            alreadySettled: true,
-          });
-        } else {
-          // Object is gone but we couldn't locate the finish tx — still show
-          // the truthful settled state rather than offering another finish.
-          setChainSettled(true);
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('[BuyerOrderWorkspace] chain settle check failed', error);
-      }
-    })();
-  }, [escrow, released, chainSettled, recordFinish]);
-
   const confirmReceipt = useCallback(async () => {
     if (!escrow) return;
     if (!escrow.tracking_delivered) {
@@ -576,6 +530,54 @@ export default function BuyerOrderWorkspace() {
 
   const canConfirm =
     isBuyer && !released && !disputeActive && delivered && !buyerConfirmed;
+
+  // On-chain truth check: the DB can say released while escrow_finish_tx_hash
+  // is NULL (a finish signed on a killed tab, or a SQL-stamped row). If the
+  // ledger no longer holds the Escrow object, recover the real finish hash
+  // from the owner's history and record it — no new signature needed.
+  // Runs after derived state so every referenced binding is initialized, and
+  // stays before the render guards so hook order never changes.
+  const [chainSettled, setChainSettled] = useState(false);
+  const healCheckedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!escrow || !released || escrow.escrow_finish_tx_hash || chainSettled) return;
+    if (!escrow.escrow_sequence || !escrow.escrow_create_tx_hash) return;
+    if (!/^r[1-9A-HJ-NP-Za-km-z]{24,33}$/.test(escrow.buyer_address ?? '')) return;
+    if (healCheckedRef.current === escrow.id) return;
+    healCheckedRef.current = escrow.id;
+
+    (async () => {
+      try {
+        const consumed = await isEscrowConsumedOnChain(
+          escrow.buyer_address,
+          escrow.escrow_create_tx_hash!
+        );
+        if (!consumed) return;
+        const prior = await findEscrowFinishTxHash(
+          escrow.buyer_address,
+          escrow.escrow_sequence!
+        );
+        if (prior) {
+          await recordFinish({
+            txHash: prior.hash,
+            signerAddress: prior.account,
+            ownerAddress: escrow.buyer_address,
+            offerSequence: escrow.escrow_sequence!,
+            explorerUrl: `https://${escrowNetwork() === 'testnet' ? 'testnet.xrpl.org' : 'livenet.xrpl.org'}/transactions/${prior.hash}`,
+            alreadySettled: true,
+          });
+        } else {
+          // Object is gone but we couldn't locate the finish tx — still show
+          // the truthful settled state rather than offering another finish.
+          setChainSettled(true);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[BuyerOrderWorkspace] chain settle check failed', error);
+      }
+    })();
+  }, [escrow, released, chainSettled, recordFinish]);
 
   // -------------------------------------------------------------------------
   // Guards
