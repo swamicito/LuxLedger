@@ -39,7 +39,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import {
   Select,
@@ -126,7 +125,7 @@ type SlaStatus = 'on_track' | 'at_risk' | 'missed' | 'shipped';
 // ---------------------------------------------------------------------------
 
 const TRUST_SHIPPING =
-  "Seller is responsible for insured shipping to the buyer's verified address.";
+  "Seller is responsible for tracked shipping to the buyer's delivery address.";
 const TRUST_HELD =
   'Funds remain in escrow until delivery is confirmed.';
 const TRUST_RELEASED =
@@ -414,8 +413,12 @@ export default function SellerFulfillmentWorkspace() {
   const thumb = asset?.images?.[0];
   const buyerName =
     buyer?.full_name ?? buyer?.username ?? maskAddress(escrow.buyer_address);
-  const released = escrow.escrow_status === 'released';
   const disputeActive = Boolean(escrow.dispute_active);
+  // Terminal escrow states: nothing left to ship or update — SLA banners and
+  // the shipping form stay hidden and settled/payout is all that renders.
+  const settled = ['released', 'refunded', 'disputed', 'expired'].includes(
+    escrow.escrow_status ?? ''
+  );
 
   return (
     <div
@@ -476,7 +479,7 @@ export default function SellerFulfillmentWorkspace() {
 
             <div className="flex items-center gap-3">
               <StatusPill
-                released={released}
+                escrowStatus={escrow.escrow_status}
                 disputeActive={disputeActive}
                 slaMissed={sla.status === 'missed' && !escrow.shipped_at}
               />
@@ -500,24 +503,31 @@ export default function SellerFulfillmentWorkspace() {
       {/* Main */}
       <div className="container mx-auto px-6 py-6">
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left column: fulfillment actions */}
+          {/* Left column: fulfillment actions — locked once the escrow
+              reaches a terminal state */}
           <div className="space-y-6 lg:col-span-2">
-            <ShipByDeadlineCard
-              deadline={shipByDeadline}
-              sla={sla}
-              shipped={Boolean(escrow.shipped_at)}
-              shippedAt={escrow.shipped_at}
-              slaDays={requirements.shippingSLADays}
-            />
+            {settled ? (
+              <SettledFulfillmentCard escrow={escrow} />
+            ) : (
+              <>
+                <ShipByDeadlineCard
+                  deadline={shipByDeadline}
+                  sla={sla}
+                  shipped={Boolean(escrow.shipped_at)}
+                  shippedAt={escrow.shipped_at}
+                  slaDays={requirements.shippingSLADays}
+                />
 
-            <ShippingForm
-              escrow={escrow}
-              category={category}
-              requirements={requirements}
-              onSubmitted={fetchAll}
-            />
+                <ShippingForm
+                  escrow={escrow}
+                  category={category}
+                  requirements={requirements}
+                  onSubmitted={fetchAll}
+                />
 
-            <ProofUploadsCard />
+                <ProofUploadsCard />
+              </>
+            )}
           </div>
 
           {/* Right column: status visibility */}
@@ -540,7 +550,9 @@ export default function SellerFulfillmentWorkspace() {
                   <div className="flex-1">
                     <p className="text-sm font-semibold">Need help?</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {TRUST_SLA_WARNING}
+                      {settled
+                        ? 'This order is settled — shipping details are locked.'
+                        : TRUST_SLA_WARNING}
                     </p>
                     <div className="mt-3 flex flex-col gap-2">
                       <Button
@@ -575,31 +587,40 @@ export default function SellerFulfillmentWorkspace() {
 // ---------------------------------------------------------------------------
 
 function StatusPill({
-  released,
+  escrowStatus,
   disputeActive,
   slaMissed,
 }: {
-  released: boolean;
+  escrowStatus: string | null;
   disputeActive: boolean;
   slaMissed: boolean;
 }) {
-  const tone = released
+  const terminal = ['released', 'refunded', 'disputed', 'expired'].includes(
+    escrowStatus ?? ''
+  );
+  const tone = escrowStatus === 'released'
     ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-    : disputeActive
+    : escrowStatus === 'disputed' || disputeActive
     ? 'border-red-500/30 bg-red-500/10 text-red-300'
+    : terminal
+    ? 'border-white/20 bg-white/5 text-muted-foreground'
     : slaMissed
     ? 'border-red-500/30 bg-red-500/10 text-red-300'
     : 'border-amber-500/30 bg-amber-500/10 text-amber-300';
 
-  const Icon = released
+  const Icon = escrowStatus === 'released'
     ? ShieldCheck
-    : disputeActive || slaMissed
+    : escrowStatus === 'disputed' || disputeActive || slaMissed
     ? AlertTriangle
     : Lock;
 
-  const label = released
+  const label = escrowStatus === 'released'
     ? 'Released'
-    : disputeActive
+    : escrowStatus === 'refunded'
+    ? 'Refunded'
+    : escrowStatus === 'expired'
+    ? 'Expired'
+    : escrowStatus === 'disputed' || disputeActive
     ? 'Release blocked — dispute'
     : slaMissed
     ? 'At Risk — SLA missed'
@@ -715,31 +736,23 @@ function ShippingForm({
   const [trackingNumber, setTrackingNumber] = useState(
     escrow.tracking_number ?? ''
   );
-  const [insuredValue, setInsuredValue] = useState<string>(
-    String(escrow.amount_usd ?? '')
-  );
-  const [insuranceConfirmed, setInsuranceConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const released = escrow.escrow_status === 'released';
   const shipped = Boolean(escrow.shipped_at);
-  const disabled = released;
+  // Terminal states freeze shipping entirely — the form is never rendered for
+  // them, but guard the mutation too so no caller can slip an update through.
+  const disabled = ['released', 'refunded', 'disputed', 'expired'].includes(
+    escrow.escrow_status ?? ''
+  );
 
   const handleSubmit = useCallback(async () => {
+    if (disabled) {
+      toast.error('This order is settled — shipping details are locked.');
+      return;
+    }
     if (!trackingNumber.trim()) {
       toast.error('Tracking number is required');
       return;
-    }
-    if (requirements.requiresInsurance) {
-      const numeric = Number(insuredValue);
-      if (!numeric || numeric <= 0) {
-        toast.error('Insured value is required');
-        return;
-      }
-      if (!insuranceConfirmed) {
-        toast.error('Please confirm insurance has been added');
-        return;
-      }
     }
 
     setSubmitting(true);
@@ -773,10 +786,8 @@ function ShippingForm({
   }, [
     carrier,
     trackingNumber,
-    insuredValue,
-    insuranceConfirmed,
-    requirements.requiresInsurance,
     escrow.id,
+    disabled,
     onSubmitted,
   ]);
 
@@ -838,39 +849,6 @@ function ShippingForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="insured">Insured value (USD)</Label>
-            <Input
-              id="insured"
-              type="number"
-              min="0"
-              step="1"
-              value={insuredValue}
-              onChange={(e) => setInsuredValue(e.target.value)}
-              className="bg-black/40"
-              disabled={disabled}
-            />
-            <p className="text-[0.7rem] text-muted-foreground">
-              {requirements.requiresInsurance
-                ? `Required: minimum ${requirements.minInsurancePercent}% of declared value.`
-                : 'Optional but recommended.'}
-            </p>
-          </div>
-
-          <div className="space-y-2 sm:col-span-1">
-            <Label className="invisible sm:visible">Insurance</Label>
-            <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
-              <Checkbox
-                checked={insuranceConfirmed}
-                onCheckedChange={(v) => setInsuranceConfirmed(Boolean(v))}
-                disabled={disabled}
-                className="mt-0.5"
-              />
-              <span>
-                I confirm insurance has been added for the full declared value.
-              </span>
-            </label>
-          </div>
         </div>
 
         <div className="rounded-md border border-white/10 bg-black/20 p-3 text-[0.7rem] text-muted-foreground">
@@ -894,6 +872,75 @@ function ShippingForm({
 
         <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground/80">
           {TRUST_RULE}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Read-only summary for terminal escrow states — no ship-by pressure, no
+// editable shipping form. Payout details live in the PayoutCard column.
+function SettledFulfillmentCard({ escrow }: { escrow: EscrowRow }) {
+  const label =
+    escrow.escrow_status === 'released'
+      ? 'Settled — funds released'
+      : escrow.escrow_status === 'refunded'
+      ? 'Refunded to buyer'
+      : escrow.escrow_status === 'disputed'
+      ? 'Under dispute'
+      : 'Escrow expired';
+  const tone =
+    escrow.escrow_status === 'released'
+      ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-300'
+      : escrow.escrow_status === 'disputed'
+      ? 'border-red-500/20 bg-red-500/5 text-red-300'
+      : 'border-white/10 bg-white/5 text-muted-foreground';
+
+  return (
+    <Card className="border border-white/10 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-900/95">
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-amber-400" />
+          <p className="text-sm font-semibold">Fulfillment closed</p>
+        </div>
+        <div className={cn('rounded-md border px-3 py-2 text-xs', tone)}>
+          {label}
+          {escrow.released_at && escrow.escrow_status === 'released'
+            ? ` · ${formatDateTime(escrow.released_at)}`
+            : ''}
+        </div>
+        {escrow.shipped_at && (
+          <div className="grid gap-3 sm:grid-cols-2 text-sm">
+            <div>
+              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                Carrier
+              </p>
+              <p className="mt-1">{escrow.carrier?.toUpperCase() ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                Tracking
+              </p>
+              <p className="mt-1 font-mono">{escrow.tracking_number ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                Shipped
+              </p>
+              <p className="mt-1">{formatDateTime(escrow.shipped_at)}</p>
+            </div>
+            <div>
+              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                Delivered
+              </p>
+              <p className="mt-1">
+                {formatDateTime(escrow.tracking_delivered_at ?? escrow.delivered_at)}
+              </p>
+            </div>
+          </div>
+        )}
+        <p className="text-[0.7rem] text-muted-foreground">
+          Shipping details are locked — this escrow is settled.
         </p>
       </CardContent>
     </Card>

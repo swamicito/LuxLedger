@@ -298,7 +298,7 @@ export default function Trading() {
                 TRADING TERMINAL
               </h1>
               <p className="text-xs sm:text-sm hidden sm:block" style={{ color: '#6B7280' }}>
-                Tokenized luxury assets · Real-time execution
+                Luxury assets · Real-time execution
               </p>
             </div>
             

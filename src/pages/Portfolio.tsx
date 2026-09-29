@@ -344,11 +344,10 @@ export default function Portfolio() {
 
           {/* Main Content */}
           <Tabs defaultValue="assets" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsList className="grid w-full grid-cols-3 h-auto">
               <TabsTrigger value="assets" className="text-xs sm:text-sm px-1 sm:px-3 py-2">Assets</TabsTrigger>
               <TabsTrigger value="transactions" className="text-xs sm:text-sm px-1 sm:px-3 py-2">History</TabsTrigger>
               <TabsTrigger value="analytics" className="text-xs sm:text-sm px-1 sm:px-3 py-2">Analytics</TabsTrigger>
-              <TabsTrigger value="yield" className="text-xs sm:text-sm px-1 sm:px-3 py-2">Yield</TabsTrigger>
             </TabsList>
 
             <TabsContent value="assets">
@@ -557,61 +556,6 @@ export default function Portfolio() {
               </div>
             </TabsContent>
 
-            <TabsContent value="yield">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Yield Opportunities</CardTitle>
-                    <CardDescription>Earn passive income from your assets</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">Asset Staking</h4>
-                          <Badge variant="secondary">8.5% APY</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Stake your tokenized assets to earn rewards
-                        </p>
-                        <Button size="sm" variant="outline">
-                          Start Staking
-                        </Button>
-                      </div>
-
-                      <div className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">Liquidity Provision</h4>
-                          <Badge variant="secondary">12.3% APY</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Provide liquidity to trading pairs
-                        </p>
-                        <Button size="sm" variant="outline">
-                          Provide Liquidity
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Current Yields</CardTitle>
-                    <CardDescription>Your active yield positions</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8">
-                      <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">No active yield positions</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Start earning by staking your assets
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
           </Tabs>
         </div>
       </div>

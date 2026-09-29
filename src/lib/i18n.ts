@@ -36,7 +36,7 @@ const resources = {
       // Marketplace
       marketplace: {
         title: 'Luxury Asset Marketplace',
-        subtitle: 'Discover exclusive tokenized luxury assets',
+        subtitle: 'Discover exclusive luxury assets, settled through escrow',
         filters: {
           all: 'All Assets',
           realEstate: 'Real Estate',

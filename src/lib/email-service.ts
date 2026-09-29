@@ -114,16 +114,16 @@ export class EmailService {
             <h2 style="color: #333; margin-bottom: 20px;">Hello ${userData.name}!</h2>
             
             <p style="color: #495057; line-height: 1.6; margin-bottom: 20px;">
-              Welcome to LuxLedger, the world's premier marketplace for tokenized luxury assets. 
-              You now have access to exclusive real estate, jewelry, exotic cars, and fine art 
-              backed by blockchain technology.
+              Welcome to LuxLedger, the marketplace for luxury assets settled through
+              on-chain escrow. You now have access to real estate, jewelry, collector
+              cars, and fine art — with funds protected until delivery is confirmed.
             </p>
             
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
               <h3 style="margin: 0 0 15px 0; color: #495057;">What You Can Do:</h3>
               <ul style="color: #6c757d; line-height: 1.8;">
-                <li>Browse and purchase tokenized luxury assets</li>
-                <li>Trade asset tokens with instant XRPL settlement</li>
+                <li>Browse and purchase luxury assets</li>
+                <li>Pay with XRP — funds stay in escrow until delivery is confirmed</li>
                 <li>View your portfolio and transaction history</li>
                 <li>Access exclusive luxury asset opportunities</li>
               </ul>
@@ -212,8 +212,8 @@ export class EmailService {
             </div>
             
             <p style="color: #6c757d; margin-bottom: 30px;">
-              A new luxury asset has been listed on LuxLedger. Don't miss this exclusive 
-              opportunity to invest in premium tokenized assets.
+              A new luxury asset has been listed on LuxLedger. Every purchase is
+              settled through on-chain escrow.
             </p>
             
             <div style="text-align: center;">

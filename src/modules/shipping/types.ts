@@ -399,13 +399,13 @@ export const TRUST_COPY = {
   ESCROW_LOCKED: 'Your funds are securely locked in blockchain escrow.',
   ESCROW_PROTECTED: 'Funds remain in escrow until delivery is confirmed.',
   ESCROW_RELEASE: 'The seller will receive payment after you confirm receipt.',
-  SELLER_SHIPS: 'The seller will ship the item to the verified destination.',
-  SELLER_RESPONSIBLE: 'Seller is responsible for insured shipping to your verified address.',
-  APPROVED_CARRIERS: 'Insured, tracked delivery via approved carriers.',
+  SELLER_SHIPS: 'The seller will ship the item to the delivery address.',
+  SELLER_RESPONSIBLE: 'Seller is responsible for tracked shipping to the delivery address.',
+  APPROVED_CARRIERS: 'Tracked delivery via supported carriers.',
   DISPUTE_WINDOW: 'You have {hours} hours to inspect the item and report any issues.',
   DISPUTE_PROTECTION: 'Your funds remain protected during the dispute process.',
-  CHAIN_OF_CUSTODY: 'Chain-of-custody available for high-value assets.',
-  VERIFIED_LOGISTICS: 'White-glove logistics with signature verification.',
+  CHAIN_OF_CUSTODY: 'Tracking details are recorded on the order.',
+  VERIFIED_LOGISTICS: 'Tracked shipping with delivery confirmation.',
 } as const;
 
 // ============================================================================

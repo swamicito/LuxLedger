@@ -121,7 +121,7 @@ const TRUST_HELD =
 const TRUST_RELEASED =
   'Funds have been released to the seller. Transaction complete.';
 const TRUST_SHIPPING =
-  'Seller is responsible for insured shipping to your verified address.';
+  'Seller is responsible for tracked shipping to your delivery address.';
 const TRUST_RULE =
   'Release occurs only when all conditions are met.';
 

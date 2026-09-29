@@ -53,7 +53,7 @@ export function HeroSection() {
               className="mx-auto mb-12 max-w-2xl text-base leading-relaxed sm:text-lg"
               style={{ color: "var(--ivory)", opacity: 0.82 }}
             >
-              Authenticated real estate, jewelry, watches, and collector cars.
+              Real estate, jewelry, watches, and collector cars.
               <br className="hidden sm:block" />
               {" "}Funds stay in escrow until delivery is confirmed.
             </p>
@@ -103,8 +103,8 @@ export function HeroSection() {
 function HowOwnershipMoves() {
   const columns = [
     {
-      title: "Verified before it is listed",
-      body: "Every asset is authenticated before it goes live. The object is real. The record should be too.",
+      title: "Reviewed — and marked honestly",
+      body: "Listings show whether our team has reviewed them. If we haven't, the page says so. No borrowed credibility.",
     },
     {
       title: "Funds held in escrow",

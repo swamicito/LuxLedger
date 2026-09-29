@@ -45,39 +45,39 @@ export function AIConcierge() {
   const quickActions: QuickAction[] = [
     {
       id: '1',
-      text: "What is an NFT?",
+      text: "How does buying work?",
       category: "basics",
-      response: "An NFT (Non-Fungible Token) is a unique digital certificate stored on a blockchain that proves ownership of a specific digital or physical asset. Think of it like a digital deed or certificate of authenticity. In LuxLedger, we use NFTs to represent ownership of luxury assets like art, watches, or real estate shares."
+      response: "Pick a listing and pay with XRP through Xaman. Your payment goes into an escrow on the XRP Ledger — not to us, not to the seller — and stays there until the carrier reports delivery and you confirm receipt. Only then do funds release to the seller."
     },
     {
       id: '2',
-      text: "How do I buy fractional shares?",
-      category: "investing",
-      response: "Fractional ownership allows you to buy a portion of a high-value asset. Here's how it works: 1) Browse our fractional offerings, 2) Choose the number of shares you want to purchase, 3) Complete the transaction with your connected wallet, 4) Receive your ownership tokens. You'll earn dividends and can sell your shares anytime on our marketplace."
+      text: "What does 'Listing reviewed' mean?",
+      category: "trust",
+      response: "Each listing shows its review state. 'Listing reviewed' means our team signed off on the listing and its documents. 'Seller listing — not independently reviewed' means we haven't reviewed it yet. Either way, every purchase is escrow-protected."
     },
     {
       id: '3',
-      text: "Is my investment secure?",
+      text: "Is my payment protected?",
       category: "security",
-      response: "Absolutely! LuxLedger uses multiple security layers: 1) All assets are professionally verified and appraised, 2) Blockchain technology ensures transparent ownership records, 3) We're regulated and insured, 4) Your digital wallet gives you complete control over your assets. Physical assets are stored in secure, insured facilities."
+      response: "Yes — your payment is held in an escrow object on the XRP Ledger until delivery is confirmed. If something goes wrong you can open a dispute, which blocks release while it's reviewed."
     },
     {
       id: '4',
-      text: "How do auctions work?",
-      category: "auctions",
-      response: "Our auctions are simple and transparent: 1) Browse live auctions in the Auctions section, 2) Place your bid (higher than current bid), 3) You can set a maximum bid for automatic bidding, 4) If you win, you'll be notified and guided through payment, 5) The asset is transferred to your wallet. All auctions have clear end times and reserve prices."
+      text: "What happens after I buy?",
+      category: "orders",
+      response: "You get an order page (/order/:id) that tracks the escrow: the seller ships with an approved carrier and tracking, you confirm receipt when it arrives, and the escrow settles on-chain. You can open a dispute from the same page if the item isn't right."
     },
     {
       id: '5',
       text: "What fees do you charge?",
       category: "fees",
-      response: "Our fees are transparent and competitive: 2.5% marketplace fee on completed transactions, 0.1% for cross-chain bridging, and no fees for browsing, bidding, or wallet connections. Premium members get reduced fees. All fees are clearly shown before you confirm any transaction."
+      response: "Sellers pay a 2.5% platform fee on completed sales. Buyers pay no platform fee. XRPL network fees are fractions of a cent."
     },
     {
       id: '6',
       text: "How to contact human support?",
       category: "support",
-      response: "I'd be happy to connect you with our human support team! They're available 24/7 for complex questions. Would you like me to transfer you now, or would you prefer to schedule a call?"
+      response: "I can connect you with our support team for complex questions — use the contact page and we'll follow up. For order issues you can also open a dispute right from your order page."
     }
   ];
 
@@ -85,7 +85,7 @@ export function AIConcierge() {
     // Initialize with welcome message
     const welcomeMessage: ChatMessage = {
       id: '1',
-      content: `Hello${user ? ` ${user.user_metadata?.full_name || 'there'}` : ''}! 👋 I'm Lily, your LuxLedger AI concierge. I'm here to help you navigate the world of luxury asset investing. I can explain concepts in simple terms, guide you through our platform, and connect you with human experts when needed. What would you like to know?`,
+      content: `Hello${user ? ` ${user.user_metadata?.full_name || 'there'}` : ''}! 👋 I'm Lily, your LuxLedger concierge. I'm here to help you navigate luxury assets with escrow-protected checkout — I can explain how buying, shipping, and settlement work. What would you like to know?`,
       sender: 'ai',
       timestamp: new Date().toISOString(),
       type: 'text',
@@ -188,13 +188,13 @@ export function AIConcierge() {
     if (lowerInput.includes('human') || lowerInput.includes('person') || lowerInput.includes('expert') || lowerInput.includes('complex')) {
       return {
         id: (Date.now() + 1).toString(),
-        content: "I'd be happy to connect you with one of our luxury investment experts! Our human team can provide personalized advice and handle complex inquiries. Would you prefer a live chat, phone call, or scheduled consultation?",
+        content: "I can point you to our support team for anything complex — reach them through the contact page, or open a dispute directly from your order page if an order went wrong.",
         sender: 'ai',
         timestamp: new Date().toISOString(),
         type: 'handoff',
         metadata: {
           confidence: 100,
-          suggestions: ["Start live chat", "Schedule phone call", "Continue with AI"]
+          suggestions: ["Contact support", "Open my order", "Continue with concierge"]
         }
       };
     }
@@ -476,7 +476,7 @@ export function AIConcierge() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Lily can explain concepts, guide you through our platform, and connect you with human experts.
+            Lily can explain how escrow, shipping, and settlement work, and point you to support when you need a human.
           </p>
         </div>
       </Card>

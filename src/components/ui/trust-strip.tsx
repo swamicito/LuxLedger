@@ -1,4 +1,4 @@
-import { ShieldCheck, Lock, Scale, Truck, BadgeCheck, Store } from "lucide-react";
+import { ShieldCheck, Lock, Scale, BadgeCheck, Store } from "lucide-react";
 
 type ReviewState = "unreviewed" | "reviewed" | "in_escrow" | "sold";
 
@@ -79,14 +79,7 @@ export function TrustStrip({
       show: showVerification,
       ...(reviewChip(reviewState ?? "unreviewed", hasDocuments)),
     },
-    {
-      show: showDelivery,
-      icon: Truck,
-      label: "Insured delivery",
-      description: "Full coverage during transit",
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/10",
-    },
+
     {
       show: showDispute,
       icon: Scale,
@@ -142,7 +135,7 @@ export function TrustBadge({
   type,
   size = "sm",
 }: {
-  type: "escrow" | "verified" | "insured" | "dispute";
+  type: "escrow" | "verified" | "dispute";
   size?: "sm" | "md";
 }) {
   const config = {
@@ -157,12 +150,6 @@ export function TrustBadge({
       label: "Listing reviewed",
       color: "text-amber-400",
       bgColor: "bg-amber-500/10 border-amber-500/30",
-    },
-    insured: {
-      icon: Truck,
-      label: "Insured",
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/10 border-blue-500/30",
     },
     dispute: {
       icon: Scale,

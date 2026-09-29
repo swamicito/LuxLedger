@@ -284,7 +284,7 @@ export default function MarketplacePage() {
               </h1>
               <span className="hidden sm:inline text-gray-600">·</span>
               <p className="text-xs sm:text-sm whitespace-nowrap" style={{ color: '#6B7280' }}>
-                Authenticated · Blockchain verified
+                Escrow-settled · On-chain records
               </p>
             </div>
             

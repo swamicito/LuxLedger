@@ -376,22 +376,18 @@ export default function ShippingHelp() {
                       <ul className="list-disc list-inside mt-2 space-y-1">
                         <li>Carrier name</li>
                         <li>Tracking number</li>
-                        <li>Declared/insured value</li>
-                        <li>Confirmation that shipment is insured</li>
                       </ul>
                     </AccordionContent>
                   </AccordionItem>
 
                   <AccordionItem value="insurance">
-                    <AccordionTrigger>Is insurance required?</AccordionTrigger>
+                    <AccordionTrigger>Is shipping insurance provided?</AccordionTrigger>
                     <AccordionContent className="text-muted-foreground">
-                      <p><strong>Yes.</strong> All shipments must be insured for 100% of item value.</p>
-                      <p className="mt-2">You can:</p>
-                      <ul className="list-disc list-inside mt-1 space-y-1">
-                        <li>Use carrier's declared value coverage</li>
-                        <li>Purchase third-party shipping insurance</li>
-                        <li>Use specialty carriers with built-in coverage (Brink's, Malca-Amit)</li>
-                      </ul>
+                      <p>
+                        LuxLedger does not provide shipping insurance. Sellers are
+                        responsible for choosing a tracked carrier; buyers should
+                        discuss coverage options with the seller before purchase.
+                      </p>
                     </AccordionContent>
                   </AccordionItem>
 
@@ -513,7 +509,6 @@ function CategoryCard({
             <li>• Ship within {requirements.shippingSLADays} days</li>
             <li>• {requirements.disputeWindowHours}h dispute window</li>
             {requirements.requiresSignature && <li>• Signature required</li>}
-            {requirements.requiresInsurance && <li>• {requirements.minInsurancePercent}% insurance required</li>}
           </ul>
         </div>
         <div>

@@ -39,31 +39,31 @@ const INTENT_PATTERNS = {
     responses: [
       "Hello! I'm your LuxLedger AI concierge. How can I help you with luxury asset investing today?",
       "Welcome to LuxLedger! I'm here to assist you with crypto, trading, and platform questions.",
-      "Hi there! Ready to explore the world of tokenized luxury assets? What would you like to know?"
+      "Hi there! Ready to explore luxury assets with escrow-protected settlement? What would you like to know?"
     ]
   },
   
   crypto_basics: {
     patterns: ['what is crypto', 'explain blockchain', 'how does xrp work', 'what is xrpl'],
     responses: [
-      "Cryptocurrency is digital money secured by cryptography. XRP is a digital asset that enables fast, low-cost international payments on the XRP Ledger (XRPL), which is what powers LuxLedger's tokenized luxury assets.",
-      "The XRP Ledger is a decentralized blockchain that processes transactions in 3-5 seconds with minimal fees. We use it to tokenize luxury assets like real estate, art, and jewelry, making them tradeable as digital tokens."
+      "Cryptocurrency is digital money secured by cryptography. XRP is a digital asset that enables fast, low-cost international payments on the XRP Ledger (XRPL) — the network LuxLedger uses for escrow settlement.",
+      "The XRP Ledger is a decentralized blockchain that processes transactions in 3-5 seconds with minimal fees. We use it to hold purchase funds in on-chain escrow until delivery is confirmed."
     ]
   },
 
   platform_help: {
     patterns: ['how to buy', 'how to sell', 'how to trade', 'wallet connection', 'kyc verification'],
     responses: [
-      "To get started: 1) Connect your XUMM wallet, 2) Complete KYC verification if required in your region, 3) Browse our marketplace for tokenized luxury assets, 4) Use our fiat onramps to buy XRP, then purchase asset tokens.",
-      "Trading on LuxLedger is easy! Use our DEX interface to create buy/sell offers for tokenized assets. You can also lend your tokens for passive income or list your assets for resale."
+      "To get started: 1) Sign in and connect your Xaman wallet, 2) Browse the marketplace for luxury assets, 3) Buy with XRP — your payment goes into on-chain escrow and stays there until delivery is confirmed.",
+      "Buying on LuxLedger: pick a listing, fund the escrow by signing in Xaman, and confirm receipt when your item arrives. Funds release to the seller only after delivery — never before."
     ]
   },
 
   investment_advice: {
     patterns: ['investment strategy', 'which assets', 'portfolio advice', 'diversification'],
     responses: [
-      "I can't provide financial advice, but I can explain our asset types: Real estate tokens offer stability, luxury goods like watches/jewelry provide collectible value, and art tokens can appreciate significantly. Consider your risk tolerance and diversify across categories.",
-      "Our platform offers various investment options: direct asset ownership through tokens, fractional shares of high-value items, lending pools for passive income, and DEX trading for active strategies. Each has different risk/reward profiles."
+      "I can't provide financial advice, but I can explain our categories: real estate, jewelry and watches, and collector cars — each purchased outright and settled through on-chain escrow.",
+      "LuxLedger is a marketplace for whole luxury assets, not fractional tokens. Every purchase is protected by escrow: funds are held on the XRP Ledger until delivery is confirmed."
     ]
   },
 
@@ -87,31 +87,31 @@ const INTENT_PATTERNS = {
 // Asset-specific knowledge base
 const ASSET_KNOWLEDGE = {
   real_estate: {
-    description: "Tokenized real estate represents fractional ownership in premium properties. Each token corresponds to a specific square footage or percentage of the property.",
-    benefits: ["Liquidity for traditionally illiquid assets", "Fractional ownership of premium properties", "Potential rental income distribution", "Geographic diversification"],
-    risks: ["Market volatility", "Regulatory changes", "Property management dependencies"],
-    typical_returns: "5-12% annually including potential appreciation"
+    description: "Premium residences and estates sold as whole assets, with payment held in on-chain escrow through closing and delivery.",
+    benefits: ["Tangible asset class", "Escrow-protected settlement", "Documented provenance", "Direct ownership transfer"],
+    risks: ["Market volatility", "Transaction complexity", "Due diligence requirements"],
+    typical_returns: "Varies by property and market"
   },
   
   jewelry: {
-    description: "High-end jewelry pieces tokenized as NFTs, often with physical custody and insurance. Each NFT represents ownership of a specific piece.",
-    benefits: ["Collectible value appreciation", "Portable luxury asset", "Insurance and authentication included", "Global marketplace access"],
-    risks: ["Fashion trend dependencies", "Authentication challenges", "Storage and insurance costs"],
+    description: "High-end jewelry and signed pieces sold outright, with funds held in escrow until the buyer confirms delivery.",
+    benefits: ["Collectible value", "Portable asset", "Escrow protection on every order", "Global marketplace access"],
+    risks: ["Fashion trend dependencies", "Condition assessment", "Shipping and handling"],
     typical_returns: "Variable, collectible-dependent"
   },
 
   watches: {
-    description: "Luxury timepieces from brands like Rolex, Patek Philippe, and Audemars Piguet, tokenized for fractional ownership and trading.",
-    benefits: ["Strong historical appreciation", "Brand recognition and demand", "Fractional access to expensive pieces", "Global collector market"],
-    risks: ["Market saturation", "Condition dependencies", "Authentication requirements"],
-    typical_returns: "8-15% annually for premium brands"
+    description: "Luxury timepieces from brands like Rolex, Patek Philippe, and Audemars Piguet — whole pieces, settled through escrow.",
+    benefits: ["Strong historical demand", "Brand recognition", "Escrow-protected purchase", "Global collector market"],
+    risks: ["Market saturation", "Condition dependencies", "Provenance verification"],
+    typical_returns: "Varies by brand and reference"
   },
 
   art: {
-    description: "Fine art pieces and collectibles tokenized as NFTs, providing access to blue-chip artworks and emerging artists.",
-    benefits: ["Cultural and aesthetic value", "Portfolio diversification", "Access to exclusive art markets", "Potential high appreciation"],
+    description: "Fine art pieces and collectibles sold as whole works, with payment held in escrow until delivery is confirmed.",
+    benefits: ["Cultural and aesthetic value", "Portfolio diversification", "Escrow-protected settlement", "Documented provenance"],
     risks: ["Subjective valuation", "Market volatility", "Authentication and provenance"],
-    typical_returns: "Highly variable, 10-25% for established artists"
+    typical_returns: "Highly variable"
   }
 };
 
@@ -357,14 +357,14 @@ export class AIConciergeService {
       intent: 'asset_info',
       confidence: 0.6,
       suggestedActions: ['Browse All Assets', 'Asset Comparison', 'Investment Guide'],
-      quickReplies: ['Real estate tokens', 'Luxury watches', 'Fine art NFTs']
+      quickReplies: ['Real estate', 'Luxury watches', 'Fine art']
     };
   }
 
   private async handleGeneral(userMessage: string): Promise<AIResponse> {
     const suggestions = [
       "I can help you with crypto basics, platform navigation, asset information, and technical support.",
-      "Feel free to ask about XRP, XRPL, tokenized assets, trading, KYC verification, or any platform features.",
+      "Feel free to ask about XRP, XRPL, escrow, shipping, KYC verification, or any platform features.",
       "I'm here to assist with your luxury asset investment journey. What specific topic interests you?"
     ];
 

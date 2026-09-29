@@ -54,8 +54,8 @@ export function NotificationsDropdown() {
         },
         {
           id: "2",
-          title: "Asset Tokenization Complete",
-          message: "Your luxury watch has been successfully tokenized and is ready for listing.",
+          title: "Listing Live",
+          message: "Your luxury watch is listed on the marketplace.",
           type: "success" as const,
           category: "asset" as const,
           read: false,

@@ -17,7 +17,7 @@ export function AssetCategories() {
     },
     {
       title: "Jewelry & Watches",
-      description: "Authenticated stones, signed pieces, and reference timepieces with papers.",
+      description: "Stones, signed pieces, and reference timepieces with papers.",
       image: jewelryIcon,
       filterCategory: "jewelry"
     },
@@ -40,7 +40,7 @@ export function AssetCategories() {
             The Collection
           </h2>
           <p className="mx-auto max-w-2xl text-base sm:text-lg" style={{ color: 'var(--ivory)', opacity: 0.72 }}>
-            Authenticated assets across three categories, each verified before it is listed.
+            Luxury assets across three categories, every purchase settled through on-chain escrow.
           </p>
         </div>
 

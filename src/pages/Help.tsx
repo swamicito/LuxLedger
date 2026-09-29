@@ -56,8 +56,8 @@ const faqItems: FAQItem[] = [
   },
   {
     category: "verification",
-    question: "How are assets verified?",
-    answer: "Every asset listed on LuxLedger goes through a multi-step verification process: 1) Document review (certificates, provenance, receipts), 2) Photo analysis by category experts, 3) Third-party authentication for high-value items, 4) Blockchain provenance recording. Only verified assets appear on the marketplace.",
+    question: "Are listings reviewed?",
+    answer: "Each listing shows its review state on the asset page. Listings our team has reviewed display 'Listing reviewed'; everything else is labeled 'Seller listing — not independently reviewed.' Regardless of review state, every purchase is settled through on-chain escrow — funds are held until delivery is confirmed.",
   },
   {
     category: "verification",
@@ -67,7 +67,7 @@ const faqItems: FAQItem[] = [
   {
     category: "verification",
     question: "How long does verification take?",
-    answer: "KYC verification typically takes 1-3 business days. Asset verification depends on the category and value: standard items take 2-5 days, while high-value pieces requiring third-party authentication may take 1-2 weeks.",
+    answer: "KYC verification typically takes 1-3 business days. Listing review timing varies by category — the asset page always shows the current review state.",
   },
   {
     category: "fees",

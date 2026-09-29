@@ -75,7 +75,7 @@ export default function Auth() {
               Welcome to LuxLedger
             </h1>
             <p className="text-muted-foreground mt-2">
-              The premier marketplace for tokenized luxury assets
+              The marketplace for luxury assets, settled on-chain
             </p>
           </div>
         </div>
