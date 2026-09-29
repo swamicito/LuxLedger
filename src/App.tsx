@@ -43,6 +43,7 @@ import Contact from '@/pages/Contact';
 import DisputeCenter from '@/pages/DisputeCenter';
 import ShippingHelp from '@/pages/ShippingHelp';
 import TrustSecurity from '@/pages/TrustSecurity';
+import ReviewQueue from '@/pages/ReviewQueue';
 import NotFound from '@/pages/NotFound';
 import Navigation from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="/u/:username" element={<UserProfile />} />
               <Route path="/account" element={<Account />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/review" element={<ReviewQueue />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/contact" element={<Contact />} />

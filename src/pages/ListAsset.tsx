@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase-client";
 import type { Database } from "@/lib/supabase-client";
 import { toast } from "sonner";
 import { Shield, Camera, ImageIcon, ChevronLeft, Save, CheckCircle, Video } from "lucide-react";
-import { TrustBadge, VerificationStandards } from "@/components/ui/trust-signals";
+import { VerificationStandards } from "@/components/ui/trust-signals";
 import { EscapeHatches } from "@/components/ui/escape-hatches";
 import { Progress } from "@/components/ui/progress";
 import { ImageReorder } from "@/components/ui/image-reorder";
@@ -488,9 +488,9 @@ export default function ListAsset() {
                 onVideoChange={handleVideoChange}
               />
 
-              {/* Trust Signals */}
+              {/* Trust Signals — what review covers (not a claim this
+                  submission is already reviewed) */}
               <div className="space-y-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
-                <TrustBadge variant="verification" compact />
                 <VerificationStandards />
               </div>
 

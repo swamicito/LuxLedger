@@ -232,7 +232,7 @@ export default function Marketplace() {
             
             {/* Trust Strip */}
             <div className="max-w-4xl mx-auto mt-6">
-              <TrustStrip variant="compact" />
+              <TrustStrip variant="compact" showVerification={false} showDelivery={false} />
             </div>
             {regionalConfig?.legalDisclaimer && (
               <div className="max-w-3xl mx-auto p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

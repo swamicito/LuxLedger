@@ -1,4 +1,6 @@
-import { ShieldCheck, Clock, Scale, Truck, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Lock, Scale, Truck, BadgeCheck, Store } from "lucide-react";
+
+type ReviewState = "unreviewed" | "reviewed" | "in_escrow" | "sold";
 
 interface TrustStripProps {
   variant?: "default" | "compact";
@@ -6,7 +8,49 @@ interface TrustStripProps {
   showVerification?: boolean;
   showDelivery?: boolean;
   showDispute?: boolean;
+  /** Row truth for the review/settlement chip. When set, it replaces the
+   *  legacy "Verified Asset" claim entirely. */
+  reviewState?: ReviewState;
+  /** "Documents on file" subcopy renders only when true. */
+  hasDocuments?: boolean;
   className?: string;
+}
+
+function reviewChip(reviewState: ReviewState, hasDocuments: boolean) {
+  switch (reviewState) {
+    case "sold":
+      return {
+        icon: BadgeCheck,
+        label: "Sold",
+        description: "Settlement complete.",
+        color: "text-emerald-400",
+        bgColor: "bg-emerald-500/10",
+      };
+    case "in_escrow":
+      return {
+        icon: Lock,
+        label: "In escrow",
+        description: "Funds held until delivery is confirmed.",
+        color: "text-amber-400",
+        bgColor: "bg-amber-500/10",
+      };
+    case "reviewed":
+      return {
+        icon: BadgeCheck,
+        label: "Listing reviewed",
+        description: hasDocuments ? "Documents on file." : "",
+        color: "text-amber-400",
+        bgColor: "bg-amber-500/10",
+      };
+    default:
+      return {
+        icon: Store,
+        label: "Seller listing",
+        description: "Not independently reviewed.",
+        color: "text-muted-foreground",
+        bgColor: "bg-white/5",
+      };
+  }
 }
 
 export function TrustStrip({
@@ -15,29 +59,30 @@ export function TrustStrip({
   showVerification = true,
   showDelivery = true,
   showDispute = true,
+  reviewState,
+  hasDocuments = false,
   className = "",
 }: TrustStripProps) {
+  const settled = reviewState === "in_escrow" || reviewState === "sold";
   const items = [
     {
-      show: showEscrow,
+      // A live listing has no escrow yet — the claim is about the platform's
+      // purchase path. Once an escrow exists, the state chip replaces it.
+      show: showEscrow && !settled,
       icon: ShieldCheck,
-      label: "Escrow Protected",
-      description: "Funds secured until delivery confirmed",
+      label: "Escrow protected",
+      description: "Every purchase settles through on-chain escrow.",
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10",
     },
     {
       show: showVerification,
-      icon: Clock,
-      label: "Verified Asset",
-      description: "Authenticated by LuxLedger experts",
-      color: "text-amber-400",
-      bgColor: "bg-amber-500/10",
+      ...(reviewChip(reviewState ?? "unreviewed", hasDocuments)),
     },
     {
       show: showDelivery,
       icon: Truck,
-      label: "Insured Delivery",
+      label: "Insured delivery",
       description: "Full coverage during transit",
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
@@ -45,7 +90,7 @@ export function TrustStrip({
     {
       show: showDispute,
       icon: Scale,
-      label: "Dispute Resolution",
+      label: "Dispute resolution",
       description: "Fair mediation if issues arise",
       color: "text-purple-400",
       bgColor: "bg-purple-500/10",
@@ -82,7 +127,9 @@ export function TrustStrip({
             </div>
             <div>
               <p className="text-sm font-medium">{item.label}</p>
-              <p className="text-xs text-muted-foreground">{item.description}</p>
+              {item.description && (
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              )}
             </div>
           </div>
         ))}
@@ -106,8 +153,8 @@ export function TrustBadge({
       bgColor: "bg-emerald-500/10 border-emerald-500/30",
     },
     verified: {
-      icon: Clock,
-      label: "Verified",
+      icon: BadgeCheck,
+      label: "Listing reviewed",
       color: "text-amber-400",
       bgColor: "bg-amber-500/10 border-amber-500/30",
     },

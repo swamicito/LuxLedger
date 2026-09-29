@@ -49,8 +49,8 @@ export function TrustBadge({ variant = "escrow", showLink = true, compact = fals
     },
     verification: {
       icon: CheckCircle,
-      text: "Verified listing",
-      description: "This asset has been reviewed and verified by our curation team.",
+      text: "Listing reviewed",
+      description: "This listing passed LuxLedger's review process.",
       link: "/help#verification",
       linkText: "Verification standards →",
     },

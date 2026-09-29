@@ -284,12 +284,21 @@ export default function AssetDetail() {
           </div>
         </div>
 
-        {/* Trust Strip — only claim what this listing actually carries:
-            "authenticated" applies once an asset cleared review, and there is
-            no insured-transit product yet, so that claim stays hidden. */}
+        {/* Trust Strip — chips render from row truth: review stamp, escrow
+            presence, and settlement state. Nothing here claims expert
+            authentication or transit insurance. */}
         <div className="mb-6">
           <TrustStrip
-            showVerification={['verified', 'tokenized', 'listed', 'sold'].includes(asset.status)}
+            reviewState={
+              asset.status === 'sold' || linkedEscrow?.escrow_status === 'released'
+                ? 'sold'
+                : linkedEscrow
+                ? 'in_escrow'
+                : asset.listing_review_status === 'reviewed' || asset.listing_reviewed_at
+                ? 'reviewed'
+                : 'unreviewed'
+            }
+            hasDocuments={(asset.verification_documents?.length ?? 0) > 0}
             showDelivery={false}
           />
         </div>
